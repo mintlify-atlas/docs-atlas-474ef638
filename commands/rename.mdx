@@ -106,7 +106,7 @@ conda rename -n oldenv newenv --dry-run
 ```
 
 Output:
-```
+```text
 DRY RUN PREFIX clone /path/to/oldenv,/path/to/newenv
 DRY RUN PREFIX rm_rf /path/to/oldenv
 ```
@@ -168,7 +168,7 @@ conda env list
 ```bash
 conda rename -n base newname
 ```
-```
+```text
 CondaEnvException: The 'base' environment cannot be renamed
 ```
 
@@ -178,7 +178,7 @@ CondaEnvException: The 'base' environment cannot be renamed
 conda activate myenv
 conda rename -n myenv newname
 ```
-```
+```text
 CondaEnvException: Cannot rename the active environment
 ```
 
@@ -193,7 +193,7 @@ conda rename -n myenv newname
 ```bash
 conda rename -n oldenv existingenv
 ```
-```
+```text
 CondaEnvException: The environment 'existingenv' already exists. Override with --yes.
 ```
 

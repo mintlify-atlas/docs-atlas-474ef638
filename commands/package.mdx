@@ -1,0 +1,222 @@
+---
+title: conda package
+description: Low-level tools for creating conda packages (experimental)
+---
+
+<Warning>
+The `conda package` command is **EXPERIMENTAL** and may change in future releases. Use with caution in production environments.
+</Warning>
+
+The `conda package` command provides low-level tools for creating conda packages. This command is useful for package development, debugging package installations, and creating custom packages from untracked files in an environment.
+
+## Syntax
+
+```bash
+conda package [options]
+```
+
+## Options
+
+### `-w, --which PATH [PATH ...]`
+
+Given one or more file paths, print which conda package each file came from.
+
+```bash
+conda package --which /path/to/file
+conda package -w /usr/local/bin/python /usr/local/lib/libssl.so
+```
+
+**Example output:**
+```text
+/usr/local/bin/python                       python-3.9.7-h12debd9_1
+/usr/local/lib/libssl.so                    openssl-1.1.1l-h7f8727e_0
+```
+
+### `-u, --untracked`
+
+Display all untracked files in the environment and exit. Untracked files are files that exist in the environment but are not part of any installed conda package.
+
+```bash
+conda package --untracked
+```
+
+**Example output:**
+```text
+# prefix: /home/user/miniconda3/envs/myenv
+# untracked files: 3
+bin/my_custom_script.py
+lib/my_library.so
+etc/config.yaml
+```
+
+### `-r, --reset`
+
+Remove all untracked files from the environment and exit. This is useful for cleaning up an environment to return it to a pristine state.
+
+```bash
+conda package --reset
+```
+
+<Warning>
+The `--reset` flag permanently deletes untracked files. Use with caution and ensure you have backups of any files you want to keep.
+</Warning>
+
+### `--pkg-name NAME`
+
+Designate the package name for the package being created. Defaults to `"unknown"`.
+
+```bash
+conda package --pkg-name my_package
+```
+
+### `--pkg-version VERSION`
+
+Designate the package version for the package being created. Defaults to `"0.0"`.
+
+```bash
+conda package --pkg-version 1.2.3
+```
+
+### `--pkg-build BUILD`
+
+Designate the build number for the package being created. Defaults to `0`.
+
+```bash
+conda package --pkg-build 1
+```
+
+### `-n, --name NAME`
+
+Name of the environment to operate on.
+
+### `-p, --prefix PREFIX`
+
+Full path to the environment prefix.
+
+## Common Use Cases
+
+### Find which package a file belongs to
+
+Determine which conda package installed a specific file:
+
+```bash
+conda package --which /opt/conda/bin/python
+```
+
+This is useful for:
+- Debugging file conflicts
+- Understanding package contents
+- Tracking down the source of a binary or library
+
+### Identify untracked files
+
+See what files exist in your environment that weren't installed by conda:
+
+```bash
+conda package --untracked -n myenv
+```
+
+Untracked files might include:
+- Custom scripts you've added
+- Configuration files
+- Build artifacts
+- Files from pip installations
+
+### Clean up an environment
+
+Remove all untracked files to restore an environment to its original state:
+
+```bash
+conda package --reset -n myenv
+```
+
+### Create a custom package
+
+Create a conda package from untracked files in your environment:
+
+```bash
+# Add your custom files to the environment
+cp my_script.py $CONDA_PREFIX/bin/
+cp my_lib.so $CONDA_PREFIX/lib/
+
+# Create a package from the untracked files
+conda package --pkg-name my_tools --pkg-version 1.0.0 --pkg-build 0
+```
+
+Output:
+```text
+# prefix: /home/user/miniconda3/envs/myenv
+# files: 2
+# success
+my_tools-1.0.0-0.tar.bz2
+```
+
+## How Package Creation Works
+
+When creating a package:
+
+1. **File Collection**: Conda identifies all untracked files in the environment
+2. **Metadata Generation**: Creates package metadata including:
+   - Package name, version, and build number
+   - Platform and architecture information
+   - File list and checksums
+   - Python dependencies (if files are in site-packages)
+3. **Shebang Fixing**: For scripts in `bin/`, replaces hardcoded paths with conda's prefix placeholder
+4. **Archive Creation**: Bundles files and metadata into a `.tar.bz2` archive
+
+The resulting package can be installed in other conda environments using:
+
+```bash
+conda install ./my_tools-1.0.0-0.tar.bz2
+```
+
+## Determining Package Origin
+
+The `--which` flag works by:
+
+1. Resolving the absolute path of the file
+2. Finding the conda environment prefix containing the file
+3. Checking the `conda-meta/` directory for package records
+4. Matching the file path against each package's file list
+
+<Note>
+The `--which` flag only finds packages for files installed by conda. Files installed by pip or manually added will not be found.
+</Note>
+
+## Advanced Usage
+
+### Create a package with Python dependencies
+
+If your untracked files include Python modules in `site-packages/`, conda automatically:
+- Detects the installed Python version
+- Adds Python as a dependency
+- Includes the Python version in the build string
+
+```bash
+# Files in site-packages/ will trigger Python dependency detection
+conda package --pkg-name my_python_pkg --pkg-version 2.1.0
+```
+
+Output package name: `my_python_pkg-2.1.0-py39_0.tar.bz2` (for Python 3.9)
+
+### Query multiple files at once
+
+```bash
+conda package -w $(which python) $(which pip) $(which jupyter)
+```
+
+### Use in scripts
+
+The `--which` flag is useful in automation scripts:
+
+```bash
+#!/bin/bash
+# Check if numpy is installed and which package provides it
+PYTHON_PATH=$(which python)
+PACKAGE=$(conda package -w $PYTHON_PATH | awk '{print $2}')
+echo "Python is from package: $PACKAGE"
+```
+
+<Warning>
+This is an experimental command. The interface and behavior may change in future conda releases. For production package building, consider using [conda-build](https://docs.conda.io/projects/conda-build/) instead.
+</Warning>

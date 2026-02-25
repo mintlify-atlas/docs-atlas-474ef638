@@ -1,0 +1,188 @@
+---
+title: conda env config vars
+description: Manage environment variables for conda environments
+---
+
+The `conda env config vars` command allows you to interact with environment variables associated with conda environments. These variables are automatically set when the environment is activated and unset when deactivated.
+
+## Syntax
+
+```bash
+conda env config vars <subcommand> [options]
+```
+
+## Subcommands
+
+### `list`
+
+List all environment variables set for a conda environment.
+
+```bash
+conda env config vars list [options]
+```
+
+#### Options
+
+**`-n, --name NAME`**
+
+Name of the environment to list variables from.
+
+**`-p, --prefix PREFIX`**
+
+Full path to the environment prefix.
+
+**`--json`**
+
+Report output as JSON.
+
+#### Example
+
+```bash
+# List variables for a specific environment
+conda env config vars list -n my_env
+```
+
+### `set`
+
+Set one or more environment variables for a conda environment.
+
+```bash
+conda env config vars set <KEY>=<VALUE> [<KEY>=<VALUE> ...] [options]
+```
+
+#### Options
+
+**`-n, --name NAME`**
+
+Name of the environment to set variables in.
+
+**`-p, --prefix PREFIX`**
+
+Full path to the environment prefix.
+
+#### Arguments
+
+**`<KEY>=<VALUE>`**
+
+Environment variables to set in the form `KEY=VALUE`, separated by spaces. You can set multiple variables in a single command.
+
+#### Examples
+
+```bash
+# Set a single environment variable
+conda env config vars set MY_VAR=weee -n my_env
+
+# Set multiple environment variables at once
+conda env config vars set MY_VAR=something OTHER_THING=ohhhhya -n my_env
+
+# Set a variable with an equals sign in the value
+conda env config vars set DATABASE_URL=postgresql://user:pass@localhost:5432/db -n my_env
+```
+
+<Note>
+After setting variables, you need to reactivate the environment for changes to take effect:
+```bash
+conda activate my_env
+```
+</Note>
+
+### `unset`
+
+Unset (remove) one or more environment variables from a conda environment.
+
+```bash
+conda env config vars unset <KEY> [<KEY> ...] [options]
+```
+
+#### Options
+
+**`-n, --name NAME`**
+
+Name of the environment to unset variables from.
+
+**`-p, --prefix PREFIX`**
+
+Full path to the environment prefix.
+
+#### Arguments
+
+**`<KEY>`**
+
+Environment variable names to unset, separated by spaces. You can unset multiple variables in a single command.
+
+#### Examples
+
+```bash
+# Unset a single environment variable
+conda env config vars unset MY_VAR -n my_env
+
+# Unset multiple environment variables at once
+conda env config vars unset MY_VAR OTHER_THING -n my_env
+```
+
+<Note>
+After unsetting variables, you need to reactivate the environment for changes to take effect:
+```bash
+conda activate my_env
+```
+</Note>
+
+## Common Use Cases
+
+### Configure API keys for development
+
+Set API keys and tokens that should be available when working in a specific environment:
+
+```bash
+conda env config vars set API_KEY=your_key_here SECRET_TOKEN=your_token -n dev_env
+conda activate dev_env
+```
+
+### Set database connection strings
+
+Configure environment-specific database URLs:
+
+```bash
+# Production environment
+conda env config vars set DATABASE_URL=postgresql://prod_host/db -n prod_env
+
+# Development environment
+conda env config vars set DATABASE_URL=postgresql://localhost/dev_db -n dev_env
+```
+
+### View all configured variables
+
+Check what environment variables are configured for an environment:
+
+```bash
+conda env config vars list -n my_env
+```
+
+Output format:
+```text
+MY_VAR = something
+OTHER_THING = ohhhhya
+```
+
+### Remove sensitive data
+
+Unset variables containing sensitive information:
+
+```bash
+conda env config vars unset API_KEY SECRET_TOKEN -n my_env
+```
+
+<Warning>
+Environment variables set with `conda env config vars` are stored in plain text in the environment's configuration. Do not use this for highly sensitive credentials in production environments.
+</Warning>
+
+## How It Works
+
+When you set environment variables using this command:
+
+1. Variables are stored in the environment's metadata
+2. When the environment is activated, these variables are automatically set
+3. When the environment is deactivated, these variables are automatically unset
+4. Variables persist across sessions and system restarts
+
+This provides a cleaner alternative to manually setting variables in shell configuration files or activation scripts.

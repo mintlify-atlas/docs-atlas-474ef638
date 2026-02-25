@@ -87,7 +87,8 @@
               "commands/env-create",
               "commands/env-update",
               "commands/env-remove",
-              "commands/env-export"
+              "commands/env-export",
+              "commands/env-config-vars"
             ]
           },
           {
@@ -104,7 +105,8 @@
               "commands/run",
               "commands/compare",
               "commands/rename",
-              "commands/notices"
+              "commands/notices",
+              "commands/package"
             ]
           }
         ]
