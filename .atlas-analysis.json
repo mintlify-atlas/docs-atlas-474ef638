@@ -1,0 +1,155 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "Conda",
+  "projectDescription": "A system-level, binary package and environment manager running on all major operating systems and platforms",
+  "theme": "aspen",
+  "primaryColor": "#43B02A",
+  "lightColor": null,
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "User Guide",
+            "pages": [
+              "user-guide/concepts",
+              "user-guide/environments",
+              "user-guide/packages",
+              "user-guide/channels"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/condarc",
+              "configuration/environment-variables",
+              "configuration/settings"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/troubleshooting",
+              "advanced/python-api",
+              "advanced/plugins"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Command Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "commands/overview"
+            ]
+          },
+          {
+            "group": "Package Management",
+            "pages": [
+              "commands/install",
+              "commands/update",
+              "commands/remove",
+              "commands/list",
+              "commands/search",
+              "commands/clean"
+            ]
+          },
+          {
+            "group": "Environment Management",
+            "pages": [
+              "commands/create",
+              "commands/activate",
+              "commands/env-list",
+              "commands/env-create",
+              "commands/env-update",
+              "commands/env-remove",
+              "commands/env-export"
+            ]
+          },
+          {
+            "group": "Configuration Commands",
+            "pages": [
+              "commands/config",
+              "commands/info",
+              "commands/init"
+            ]
+          },
+          {
+            "group": "Additional Commands",
+            "pages": [
+              "commands/run",
+              "commands/compare",
+              "commands/rename",
+              "commands/notices"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Python API",
+            "pages": [
+              "api/overview",
+              "api/solver",
+              "api/subdir-data",
+              "api/package-cache",
+              "api/prefix-data"
+            ]
+          },
+          {
+            "group": "Plugin System",
+            "pages": [
+              "api/plugins/overview",
+              "api/plugins/hookspecs",
+              "api/plugins/types"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Cross-platform package management",
+    "Isolated environment creation and management",
+    "Multi-language support (Python, R, C/C++, etc.)",
+    "Channel-based package distribution",
+    "Dependency resolution and solving",
+    "Plugin system for extensibility",
+    "Binary package caching",
+    "Environment activation and deactivation"
+  ],
+  "publicApiSurface": [
+    "conda install",
+    "conda create",
+    "conda update",
+    "conda remove",
+    "conda env create",
+    "conda env list",
+    "conda activate",
+    "conda deactivate",
+    "conda list",
+    "conda search",
+    "conda config",
+    "conda info",
+    "conda clean",
+    "conda.api.Solver",
+    "conda.api.SubdirData",
+    "conda.api.PackageCacheData",
+    "conda.api.PrefixData",
+    "conda.plugins.hookimpl"
+  ]
+}
