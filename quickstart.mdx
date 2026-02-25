@@ -1,80 +1,215 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Get started with Conda in minutes
 ---
 
-## Get started in three steps
+This guide will help you get started with Conda's core functionality: managing packages and creating environments.
 
-Get your documentation site running locally and make your first customization.
+## Basic Package Management
 
-### Step 1: Set up your local environment
+Conda makes it easy to view, search, and install packages.
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+### Listing Installed Packages
+
+If you installed the Anaconda Distribution, you will already have hundreds of packages installed. You can see what packages are installed by running:
+
+```bash
+$ conda list
+```
+
+This displays all packages currently installed in your active environment.
+
+### Searching for Packages
+
+To see all the packages that are available:
+
+```bash
+$ conda search
+```
+
+To search for a specific package:
+
+```bash
+$ conda search numpy
+```
+
+### Installing Packages
+
+To install a package, use:
+
+```bash
+$ conda install <package-name>
+```
+
+For example, to install NumPy:
+
+```bash
+$ conda install numpy
+```
+
+## Working with Environments
+
+The real power of conda comes from its ability to manage environments. In conda, an environment can be thought of as a completely separate installation.
+
+### Why Use Environments?
+
+Conda installs packages into environments efficiently using [hard links](https://en.wikipedia.org/wiki/Hard_link) by default when it is possible, so environments are space efficient, and take seconds to create.
+
+Environments allow you to:
+- Isolate project dependencies
+- Use different versions of packages for different projects
+- Avoid conflicts between package requirements
+- Easily share reproducible environments
+
+### Understanding the Base Environment
+
+The default environment, which `conda` itself is installed into, is called `base`. This is the environment you're using when you first open a terminal after installing Conda.
+
+## Creating Your First Environment
+
+Let's create a new environment for a machine learning project.
+
+<Steps>
+  <Step title="Create the environment">
+    To create an environment with PyTorch, run:
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    ```bash
+    $ conda create --name ml-project pytorch
+    ```
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+    This creates an environment called `ml-project` with the latest version of PyTorch and its dependencies.
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    <Note>
+      You can create an environment with multiple packages at once by listing them:
+      ```bash
+      $ conda create --name my-env python=3.11 numpy pandas matplotlib
+      ```
+    </Note>
+  </Step>
+  
+  <Step title="Activate the environment">
+    Once the environment is created, activate it:
+    
+    ```bash
+    $ conda activate ml-project
+    ```
+    
+    This puts the `bin` directory of the `ml-project` environment in the front of the `PATH`, and sets it as the default environment for all subsequent conda commands.
+    
+    After activation, your terminal prompt will typically show the environment name:
+    ```
+    (ml-project) $
+    ```
+  </Step>
+  
+  <Step title="Install additional packages (optional)">
+    With the environment activated, you can install additional packages:
+    
+    ```bash
+    $ conda install numpy pandas
+    ```
+    
+    These packages will be installed only in the `ml-project` environment.
+  </Step>
+  
+  <Step title="Deactivate the environment">
+    To go back to the base environment, use:
+    
+    ```bash
+    $ conda deactivate
+    ```
+    
+    This returns you to the `base` environment.
+  </Step>
+</Steps>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+## Quick Reference
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+Here's a handy reference for the most common Conda commands:
 
-### Step 3: Go live
+<CodeGroup>
+```bash Package Management
+# List installed packages
+conda list
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+# Search for packages
+conda search <package-name>
 
-## Next steps
+# Install a package
+conda install <package-name>
 
-Now that you have your docs running, explore these key features:
+# Update a package
+conda update <package-name>
 
-<CardGroup cols={2}>
+# Remove a package
+conda remove <package-name>
+```
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
+```bash Environment Management
+# Create a new environment
+conda create --name <env-name>
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
+# Create environment with specific packages
+conda create --name <env-name> python=3.11 numpy pandas
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
+# Activate an environment
+conda activate <env-name>
 
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
+# Deactivate current environment
+conda deactivate
 
-</CardGroup>
+# List all environments
+conda env list
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+# Remove an environment
+conda env remove --name <env-name>
+```
+
+```bash Conda Management
+# Update conda itself
+conda update --name base conda
+
+# Check conda version
+conda --version
+
+# View conda configuration
+conda config --show
+```
+</CodeGroup>
+
+## Example Workflow
+
+Here's a typical workflow for starting a new Python project:
+
+<Steps>
+  <Step title="Create a project-specific environment">
+    ```bash
+    $ conda create --name data-analysis python=3.11 pandas matplotlib jupyter
+    ```
+  </Step>
+  
+  <Step title="Activate the environment">
+    ```bash
+    $ conda activate data-analysis
+    ```
+  </Step>
+  
+  <Step title="Work on your project">
+    With the environment activated, all packages you install and use will be isolated to this project.
+  </Step>
+  
+  <Step title="Deactivate when done">
+    ```bash
+    $ conda deactivate
+    ```
+  </Step>
+</Steps>
+
+## Next Steps
+
+Now that you understand the basics, you can:
+
+- Explore the [User Guide](/user-guide/concepts) for more advanced features
+- Check out the [Command Reference](/commands/overview) for a complete list of commands
+- Learn about [building your own packages](https://docs.conda.io/projects/conda-build/en/latest/)
+- Join the [conda community](https://conda.org/) on [Zulip](https://conda.zulipchat.com/)

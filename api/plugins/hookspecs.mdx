@@ -1,0 +1,866 @@
+---
+title: Hook Specifications
+description: Complete reference of all available conda plugin hooks from the CondaSpecs class
+---
+
+## Overview
+
+The `CondaSpecs` class defines all available plugin hook specifications. Each hook allows you to extend conda's functionality in a specific way.
+
+<Note>
+  All hook implementations must be decorated with `@plugins.hookimpl` and follow the naming convention `conda_<hook_name>`.
+</Note>
+
+## Available Hooks
+
+### conda_solvers
+
+Register custom solver implementations in conda.
+
+**Returns:** `Iterable[CondaSolver]`
+
+**Example:**
+
+```python
+import logging
+from conda import plugins
+from conda.core import solve
+
+log = logging.getLogger(__name__)
+
+
+class VerboseSolver(solve.Solver):
+    def solve_final_state(self, *args, **kwargs):
+        log.info("My verbose solver!")
+        return super().solve_final_state(*args, **kwargs)
+
+
+@plugins.hookimpl
+def conda_solvers():
+    yield plugins.types.CondaSolver(
+        name="verbose-classic",
+        backend=VerboseSolver,
+    )
+```
+
+<Accordion title="Usage Details">
+  - The `backend` parameter must be a subclass of `conda.core.solve.Solver`
+  - Users can select your solver with `conda install --solver=verbose-classic`
+  - Only one solver with a given name can be registered
+</Accordion>
+
+---
+
+### conda_subcommands
+
+Register external subcommands in conda.
+
+**Returns:** `Iterable[CondaSubcommand]`
+
+**Example:**
+
+```python
+from conda import plugins
+
+
+def example_command(args):
+    print("This is an example command!")
+
+
+@plugins.hookimpl
+def conda_subcommands():
+    yield plugins.types.CondaSubcommand(
+        name="example",
+        summary="example command",
+        action=example_command,
+    )
+```
+
+<Accordion title="Usage Details">
+  - The `action` callable receives parsed arguments from argparse
+  - Should return an integer exit code (0 for success)
+  - Use `configure_parser` to add custom CLI arguments
+</Accordion>
+
+---
+
+### conda_virtual_packages
+
+Register virtual packages in conda.
+
+**Returns:** `Iterable[CondaVirtualPackage]`
+
+**Example:**
+
+```python
+from conda import plugins
+
+
+@plugins.hookimpl
+def conda_virtual_packages():
+    yield plugins.types.CondaVirtualPackage(
+        name="my_custom_os",
+        version="1.2.3",
+        build="x86_64",
+    )
+```
+
+<Accordion title="Usage Details">
+  - Virtual packages represent system capabilities (OS, CPU, GPU, etc.)
+  - They can be used as dependencies in package recipes
+  - The `version` and `build` can be static values or callables
+</Accordion>
+
+---
+
+### conda_pre_commands
+
+Register pre-command functions that run before specified conda commands.
+
+**Returns:** `Iterable[CondaPreCommand]`
+
+**Example:**
+
+```python
+from conda import plugins
+
+
+def example_pre_command(command):
+    print("pre-command action")
+
+
+@plugins.hookimpl
+def conda_pre_commands():
+    yield plugins.types.CondaPreCommand(
+        name="example-pre-command",
+        action=example_pre_command,
+        run_for={"install", "create"},
+    )
+```
+
+<Accordion title="Usage Details">
+  - `run_for` specifies which commands trigger this hook
+  - The `action` receives the command name as a string parameter
+  - Useful for validation, logging, or preparation tasks
+</Accordion>
+
+---
+
+### conda_post_commands
+
+Register post-command functions that run after specified conda commands.
+
+**Returns:** `Iterable[CondaPostCommand]`
+
+**Example:**
+
+```python
+from conda import plugins
+
+
+def example_post_command(command):
+    print("post-command action")
+
+
+@plugins.hookimpl
+def conda_post_commands():
+    yield plugins.types.CondaPostCommand(
+        name="example-post-command",
+        action=example_post_command,
+        run_for={"install", "create"},
+    )
+```
+
+<Accordion title="Usage Details">
+  - Executes after the main command completes successfully
+  - Useful for cleanup, reporting, or triggering follow-up actions
+  - Multiple post-command hooks can be registered
+</Accordion>
+
+---
+
+### conda_auth_handlers
+
+Register custom authentication handlers for HTTP requests.
+
+**Returns:** `Iterable[CondaAuthHandler]`
+
+**Example:**
+
+```python
+import os
+from conda import plugins
+from requests.auth import AuthBase
+
+
+class EnvironmentHeaderAuth(AuthBase):
+    def __init__(self, *args, **kwargs):
+        self.username = os.environ["EXAMPLE_CONDA_AUTH_USERNAME"]
+        self.password = os.environ["EXAMPLE_CONDA_AUTH_PASSWORD"]
+
+    def __call__(self, request):
+        request.headers["X-Username"] = self.username
+        request.headers["X-Password"] = self.password
+        return request
+
+
+@plugins.hookimpl
+def conda_auth_handlers():
+    yield plugins.types.CondaAuthHandler(
+        name="environment-header-auth",
+        handler=EnvironmentHeaderAuth,
+    )
+```
+
+<Accordion title="Usage Details">
+  - Handler must be a subclass of `requests.auth.AuthBase`
+  - Used for authenticating requests to channels
+  - Can be channel-specific
+</Accordion>
+
+---
+
+### conda_health_checks
+
+Register health checks for `conda doctor` command.
+
+**Returns:** `Iterable[CondaHealthCheck]`
+
+**Example (Check Only):**
+
+```python
+from conda import plugins
+
+
+def example_health_check(prefix: str, verbose: bool):
+    print("This is an example health check!")
+
+
+@plugins.hookimpl
+def conda_health_checks():
+    yield plugins.types.CondaHealthCheck(
+        name="example-health-check",
+        action=example_health_check,
+    )
+```
+
+**Example (Check with Fix):**
+
+```python
+from conda import plugins
+
+
+def my_health_check(prefix: str, verbose: bool):
+    # Check and report issues
+    print("Checking for issues...")
+
+
+def my_health_fix(prefix: str, args) -> int:
+    # Fix the issues
+    print("Fixing issues...")
+    return 0  # exit code
+
+
+@plugins.hookimpl
+def conda_health_checks():
+    yield plugins.types.CondaHealthCheck(
+        name="my-check",
+        action=my_health_check,
+        fixer=my_health_fix,
+        summary="Check for common issues",
+        fix="Repair detected issues",
+    )
+```
+
+<Accordion title="Usage Details">
+  - Health checks diagnose problems in conda environments
+  - Optional `fixer` callable can repair detected issues
+  - Invoked via `conda doctor` or `conda doctor --fix`
+</Accordion>
+
+---
+
+### conda_pre_transaction_actions
+
+Register pre-transaction hooks that run before all other actions in an UnlinkLinkTransaction.
+
+**Returns:** `Iterable[CondaPreTransactionAction]`
+
+**Example:**
+
+```python
+from conda import plugins
+from conda.plugins.types import CondaPreTransactionAction
+from conda.core.path_actions import Action
+
+
+class PrintAction(Action):
+    def verify(self):
+        print("Performing verification...")
+        self._verified = True
+
+    def execute(self):
+        print(
+            self.transaction_context,
+            self.target_prefix,
+            self.unlink_precs,
+            self.link_precs,
+            self.remove_specs,
+            self.update_specs,
+            self.neutered_specs,
+        )
+
+    def reverse(self):
+        print("Reversing only happens when `execute` raises an exception.")
+
+    def cleanup(self):
+        print("Carrying out cleanup...")
+
+
+class PrintActionPlugin:
+    @plugins.hookimpl
+    def conda_pre_transaction_actions(self) -> Iterable[CondaPreTransactionAction]:
+        yield CondaPreTransactionAction(
+            name="example-pre-transaction-action",
+            action=PrintAction,
+        )
+```
+
+<Accordion title="Usage Details">
+  - Must subclass `conda.core.path_actions.Action`
+  - Implement `verify()`, `execute()`, `reverse()`, and `cleanup()` methods
+  - Runs before package unlinking/linking operations
+</Accordion>
+
+---
+
+### conda_post_transaction_actions
+
+Register post-transaction hooks that run after all other actions in an UnlinkLinkTransaction.
+
+**Returns:** `Iterable[CondaPostTransactionAction]`
+
+**Example:**
+
+```python
+from conda import plugins
+from conda.plugins.types import CondaPostTransactionAction
+from conda.core.path_actions import Action
+
+
+class PrintAction(Action):
+    def verify(self):
+        print("Performing verification...")
+        self._verified = True
+
+    def execute(self):
+        print(
+            self.transaction_context,
+            self.target_prefix,
+            self.unlink_precs,
+            self.link_precs,
+            self.remove_specs,
+            self.update_specs,
+            self.neutered_specs,
+        )
+
+    def reverse(self):
+        print("Reversing only happens when `execute` raises an exception.")
+
+    def cleanup(self):
+        print("Carrying out cleanup...")
+
+
+class PrintActionPlugin:
+    @plugins.hookimpl
+    def conda_post_transaction_actions(self) -> Iterable[CondaPostTransactionAction]:
+        yield CondaPostTransactionAction(
+            name="example-post-transaction-action",
+            action=PrintAction,
+        )
+```
+
+<Accordion title="Usage Details">
+  - Runs after all package operations complete
+  - Same action interface as pre-transaction actions
+  - Useful for post-installation tasks
+</Accordion>
+
+---
+
+### conda_pre_solves
+
+Register pre-solve functions that run before the solver processes package specs.
+
+**Returns:** `Iterable[CondaPreSolve]`
+
+**Example:**
+
+```python
+from conda import plugins
+from conda.models.match_spec import MatchSpec
+
+
+def example_pre_solve(
+    specs_to_add: frozenset[MatchSpec],
+    specs_to_remove: frozenset[MatchSpec],
+):
+    print(f"Adding {len(specs_to_add)} packages")
+    print(f"Removing {len(specs_to_remove)} packages")
+
+
+@plugins.hookimpl
+def conda_pre_solves():
+    yield plugins.types.CondaPreSolve(
+        name="example-pre-solve",
+        action=example_pre_solve,
+    )
+```
+
+<Accordion title="Usage Details">
+  - Receives specs to be added and removed
+  - Useful for logging, validation, or analytics
+  - Cannot modify the specs (read-only access)
+</Accordion>
+
+---
+
+### conda_post_solves
+
+Register post-solve functions that run after the solver provides package records.
+
+**Returns:** `Iterable[CondaPostSolve]`
+
+**Example:**
+
+```python
+from conda import plugins
+from conda.models.records import PackageRecord
+
+
+def example_post_solve(
+    repodata_fn: str,
+    unlink_precs: tuple[PackageRecord, ...],
+    link_precs: tuple[PackageRecord, ...],
+):
+    print(f"Uninstalling {len(unlink_precs)} packages")
+    print(f"Installing {len(link_precs)} packages")
+
+
+@plugins.hookimpl
+def conda_post_solves():
+    yield plugins.types.CondaPostSolve(
+        name="example-post-solve",
+        action=example_post_solve,
+    )
+```
+
+<Accordion title="Usage Details">
+  - Receives the solve result with packages to unlink/link
+  - `repodata_fn` indicates which repodata file was used
+  - Useful for reporting or analytics on solve results
+</Accordion>
+
+---
+
+### conda_settings
+
+Register new configuration settings.
+
+**Returns:** `Iterable[CondaSetting]`
+
+**Example:**
+
+```python
+from conda import plugins
+from conda.common.configuration import PrimitiveParameter
+
+
+@plugins.hookimpl
+def conda_settings():
+    yield plugins.types.CondaSetting(
+        name="example_option",
+        description="This is an example option",
+        parameter=PrimitiveParameter("default_value", element_type=str),
+        aliases=("example_option_alias",),
+    )
+```
+
+<Accordion title="Usage Details">
+  - Settings appear in `.condarc` configuration files
+  - Use `PrimitiveParameter` for simple types or `SequenceParameter` for lists
+  - Can define aliases for backward compatibility
+</Accordion>
+
+---
+
+### conda_reporter_backends
+
+Register custom reporter backends for output formatting.
+
+**Returns:** `Iterable[CondaReporterBackend]`
+
+**Example:**
+
+```python
+from pprint import pformat
+from conda import plugins
+from conda.plugins.types import (
+    CondaReporterBackend,
+    ReporterRendererBase,
+    ProgressBarBase,
+)
+
+
+class PprintReporterRenderer(ReporterRendererBase):
+    "Implementation of the ReporterRendererBase"
+
+    def detail_view(self, data):
+        return pformat(data)
+
+    def envs_list(self, data):
+        formatted_data = pformat(data)
+        return f"Environments: {formatted_data}"
+
+    def progress_bar(self, description, io_context_manager) -> ProgressBarBase:
+        "Returns our custom progress bar implementation"
+        return PprintProgressBar(description, io_context_manager)
+
+
+class PprintProgressBar(ProgressBarBase):
+    "Blank implementation of ProgressBarBase which does nothing"
+
+    def update_to(self, fraction) -> None:
+        pass
+
+    def refresh(self) -> None:
+        pass
+
+    def close(self) -> None:
+        pass
+
+
+@plugins.hookimpl
+def conda_reporter_backends():
+    yield CondaReporterBackend(
+        name="pprint",
+        description="Reporter backend based on the pprint module",
+        renderer=PprintReporterRenderer,
+    )
+```
+
+<Accordion title="Usage Details">
+  - Controls how conda formats output
+  - Must implement `ReporterRendererBase` interface
+  - Can customize progress bars, spinners, and prompts
+</Accordion>
+
+---
+
+### conda_session_headers
+
+Register HTTP request headers for all requests to specific hosts.
+
+**Returns:** `Iterable[CondaRequestHeader]`
+
+**Parameters:**
+- `host` (str): The hostname for the request
+
+**Example:**
+
+```python
+from conda import plugins
+
+HOSTS = {"example.com", "sub.example.com"}
+
+
+@plugins.hookimpl
+def conda_session_headers(host: str):
+    if host in HOSTS:
+        yield plugins.types.CondaRequestHeader(
+            name="Example-Header",
+            value="example",
+        )
+```
+
+<Accordion title="Usage Details">
+  - Headers are added to all requests to the specified host
+  - Useful for API keys, authentication tokens, or vendor-specific headers
+  - Can register multiple headers
+</Accordion>
+
+---
+
+### conda_request_headers
+
+Register HTTP request headers for specific paths on specific hosts.
+
+**Returns:** `Iterable[CondaRequestHeader]`
+
+**Parameters:**
+- `host` (str): The hostname for the request
+- `path` (str): The path for the request
+
+**Example:**
+
+```python
+from conda import plugins
+
+HOSTS = {"example.com", "sub.example.com"}
+ENDPOINT = "/path/to/endpoint.json"
+
+
+@plugins.hookimpl
+def conda_request_headers(host: str, path: str):
+    if host in HOSTS and path == ENDPOINT:
+        yield plugins.types.CondaRequestHeader(
+            name="Example-Header",
+            value="example",
+        )
+```
+
+<Accordion title="Usage Details">
+  - More granular than session headers (specific to host + path)
+  - Useful for endpoint-specific authentication or tracking
+</Accordion>
+
+---
+
+### conda_prefix_data_loaders
+
+Register custom loaders to expose non-conda packages as conda packages.
+
+**Returns:** `Iterable[CondaPrefixDataLoader]`
+
+**Example:**
+
+```python
+from pathlib import Path
+from conda import plugins
+from conda.common.path import PathType
+from conda.models.records import PrefixRecord
+from conda.plugins.types import CondaPrefixDataLoader
+
+
+@plugins.hookimpl
+def conda_prefix_data_loaders():
+    yield CondaPrefixDataLoader(
+        "hypothetical",
+        load_hypothetical_packages,
+    )
+
+
+def load_hypothetical_packages(
+    prefix: PathType, records: dict[str, PrefixRecord]
+) -> dict[str, PrefixRecord]:
+    penguin_records = {}
+    for info in Path(prefix).glob("lib/penguin/*.penguin-info"):
+        name, version = info.name.rsplit("-", 1)
+        kwargs = {}  # retrieve extra fields here
+        penguin_records[name] = PrefixRecord(
+            name=name, version=version, build_number=0, build="0", **kwargs
+        )
+    records.update(penguin_records)
+    return penguin_records
+```
+
+<Accordion title="Usage Details">
+  - Allows conda to see packages installed by other tools
+  - Updates the records dictionary in-place
+  - Returns the newly loaded records
+</Accordion>
+
+---
+
+### conda_environment_specifiers
+
+<Warning>
+  **EXPERIMENTAL** - This API may change in future releases.
+</Warning>
+
+Register custom environment specification formats.
+
+**Returns:** `Iterable[CondaEnvironmentSpecifier]`
+
+**Example:**
+
+```python
+import json
+import random
+import os
+from pathlib import Path
+from conda import plugins
+from conda.plugins.types import EnvironmentSpecBase
+from conda.env.env import Environment
+
+packages = ["python", "numpy", "scipy", "matplotlib", "pandas", "scikit-learn"]
+
+
+class RandomSpec(EnvironmentSpecBase):
+    extensions = {".random"}
+
+    def __init__(self, filename: str):
+        self.filename = filename
+
+    def can_handle(self):
+        # Return early if no filename was provided
+        if self.filename is None:
+            return False
+
+        # Extract the file extension (e.g., '.txt' or '' if no extension)
+        file_ext = os.path.splitext(self.filename)[1]
+
+        # Check if the file has a supported extension and exists
+        return any(
+            spec_ext == file_ext and os.path.exists(self.filename)
+            for spec_ext in RandomSpec.extensions
+        )
+
+    def env(self):
+        return Environment(
+            name="".join(random.choice("0123456789abcdef") for i in range(6)),
+            dependencies=[random.choice(packages) for i in range(6)],
+        )
+
+
+@plugins.hookimpl
+def conda_environment_specifiers():
+    yield plugins.types.CondaEnvironmentSpecifier(
+        name="random",
+        environment_spec=RandomSpec,
+    )
+```
+
+<Accordion title="Usage Details">
+  - Parse custom environment file formats
+  - Must implement `can_handle()` and `env` property
+  - `can_handle()` determines if the plugin can parse the file
+  - `env` property returns a `conda.env.env.Environment` object
+</Accordion>
+
+---
+
+### conda_environment_exporters
+
+Register custom environment export formats.
+
+**Returns:** `Iterable[CondaEnvironmentExporter]`
+
+**Example:**
+
+```python
+import tomlkit
+from conda import plugins
+from conda.exceptions import CondaValueError
+from conda.models.environment import Environment
+from conda.plugins.types import CondaEnvironmentExporter
+
+
+def export_toml(env: Environment) -> str:
+    # Export Environment to TOML format
+    # For formats that use the standard dictionary structure,
+    # you can use the shared utility:
+    from conda.plugins.environment_exporters.standard import to_dict
+
+    env_dict = to_dict(env)
+
+    # Create TOML document
+    toml_doc = tomlkit.document()
+
+    if env_dict.get("name"):
+        toml_doc["name"] = env_dict["name"]
+
+    if env_dict.get("channels"):
+        toml_doc["channels"] = env_dict["channels"]
+
+    if env_dict.get("dependencies"):
+        toml_doc["dependencies"] = env_dict["dependencies"]
+
+    if env_dict.get("variables"):
+        toml_doc["variables"] = env_dict["variables"]
+
+    return tomlkit.dumps(toml_doc)
+
+
+@plugins.hookimpl
+def conda_environment_exporters():
+    yield CondaEnvironmentExporter(
+        name="environment-toml",
+        aliases=("toml",),
+        default_filenames=("environment.toml",),
+        export=export_toml,
+    )
+```
+
+<Accordion title="Usage Details">
+  - Export environments to custom formats (JSON, TOML, XML, etc.)
+  - Used by `conda export` command
+  - Can define aliases and default filenames
+  - Must provide either `export` or `multiplatform_export` (not both)
+</Accordion>
+
+---
+
+### conda_package_extractors
+
+Register package extractors for different archive formats.
+
+**Returns:** `Iterable[CondaPackageExtractor]`
+
+**Example:**
+
+```python
+from conda import plugins
+from conda.common.path import PathType
+
+
+def extract_custom(source_path: PathType, destination_directory: PathType) -> None:
+    # Custom extraction logic for a hypothetical package format
+    ...
+
+
+@plugins.hookimpl
+def conda_package_extractors():
+    yield plugins.types.CondaPackageExtractor(
+        name="custom-package",
+        extensions=[".custom"],
+        extract=extract_custom,
+    )
+```
+
+<Accordion title="Usage Details">
+  - Handle unpacking of package archives
+  - Each extractor specifies supported file extensions
+  - Extraction function receives source path and destination directory
+  - Extensions are matched case-insensitively
+</Accordion>
+
+## Decorator Reference
+
+### @plugins.hookimpl
+
+The `hookimpl` decorator marks a function as a plugin hook implementation.
+
+```python
+from conda import plugins
+
+@plugins.hookimpl
+def conda_subcommands():
+    yield plugins.types.CondaSubcommand(...)
+```
+
+<Note>
+  The function name must match the hook specification name (e.g., `conda_solvers`, `conda_subcommands`, etc.).
+</Note>
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Plugin Overview" icon="book" href="/api/plugins/overview">
+    Learn about the plugin system architecture
+  </Card>
+  
+  <Card title="Plugin Types" icon="shapes" href="/api/plugins/types">
+    Explore all plugin type definitions
+  </Card>
+</CardGroup>

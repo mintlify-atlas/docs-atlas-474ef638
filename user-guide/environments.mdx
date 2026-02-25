@@ -1,0 +1,519 @@
+---
+title: Environment Management
+description: Create, activate, and manage isolated conda environments
+---
+
+## Overview
+
+Conda environments are isolated workspaces that contain specific collections of packages. They allow you to maintain different versions of packages for different projects without conflicts.
+
+<Info>
+The base environment is your default conda environment. It's recommended to create separate environments for different projects rather than installing everything in base.
+</Info>
+
+## Creating Environments
+
+### Basic Creation
+
+Use `conda create` to create a new environment:
+
+<CodeGroup>
+```bash With Name
+# Create environment with a name
+conda create -n myenv
+
+# Create with specific Python version
+conda create -n myenv python=3.11
+
+# Create with multiple packages
+conda create -n myenv numpy pandas matplotlib
+```
+
+```bash With Path
+# Create environment at specific location
+conda create -p /path/to/myenv
+
+# Create in current directory
+conda create -p ./myenv
+```
+</CodeGroup>
+
+<Warning>
+You must provide either `-n NAME` or `-p PREFIX` when creating an environment (unless using `--dry-run` or `--download-only`).
+</Warning>
+
+### Advanced Options
+
+<Accordion title="Clone an Existing Environment">
+  ```bash
+  # Clone an environment
+  conda create -n env2 --clone env1
+  
+  # Clone from specific path
+  conda create -n newenv --clone /path/to/existing/env
+  ```
+  
+  <Note>
+  When using `--clone`, you cannot specify additional packages or use `--file`.
+  </Note>
+</Accordion>
+
+<Accordion title="Create from Environment File">
+  ```bash
+  # Create from environment.yml
+  conda create -n myenv --file environment.yml
+  
+  # Create from requirements.txt
+  conda create -n myenv --file requirements.txt
+  ```
+</Accordion>
+
+<Accordion title="Specify Platform">
+  ```bash
+  # Create environment for different platform
+  conda create -n myenv --platform linux-64 python=3.11
+  ```
+  
+  <Tip>
+  Useful for creating environments that will be deployed on different architectures.
+  </Tip>
+</Accordion>
+
+## Reserved Environment Names
+
+Certain environment names are reserved and cannot be used:
+
+<CodeGroup>
+```python Reserved Names
+ROOT_ENV_NAME = "base"
+RESERVED_ENV_NAMES = (
+    "base",
+    "root",
+)
+```
+</CodeGroup>
+
+<Warning>
+Attempting to create an environment with a reserved name will result in an error.
+</Warning>
+
+## Activating and Deactivating
+
+### Activation
+
+Activating an environment modifies your shell's `PATH` and environment variables:
+
+<CodeGroup>
+```bash Activate by Name
+# Activate named environment
+conda activate myenv
+
+# Activate base environment
+conda activate base
+```
+
+```bash Activate by Path
+# Activate environment at specific path
+conda activate /path/to/myenv
+
+# Activate environment in current directory
+conda activate ./myenv
+```
+</CodeGroup>
+
+### Deactivation
+
+```bash
+# Deactivate current environment
+conda deactivate
+```
+
+<Info>
+Deactivating returns you to the base environment or your system's default Python.
+</Info>
+
+### Supported Shells
+
+Conda supports activation in multiple shells:
+
+<Tabs>
+  <Tab title="Unix/Linux/macOS">
+    ```python
+    COMPATIBLE_SHELLS = (
+        "bash",
+        "fish",
+        "tcsh",
+        "xonsh",
+        "zsh",
+        "powershell",
+    )
+    ```
+  </Tab>
+  <Tab title="Windows">
+    ```python
+    COMPATIBLE_SHELLS = (
+        "bash",
+        "cmd.exe",
+        "fish",
+        "tcsh",
+        "xonsh",
+        "zsh",
+        "powershell",
+    )
+    ```
+  </Tab>
+</Tabs>
+
+## Listing Environments
+
+### List All Environments
+
+```bash
+# List all conda environments
+conda env list
+
+# Alternative command
+conda info --envs
+```
+
+Output example:
+```
+# conda environments:
+#
+base                  *  /opt/anaconda3
+myenv                    /opt/anaconda3/envs/myenv
+project1                 /home/user/projects/ml/.conda
+```
+
+<Info>
+The asterisk (*) indicates the currently active environment.
+</Info>
+
+### List Packages in Environment
+
+```bash
+# List all packages in active environment
+conda list
+
+# List packages in specific environment
+conda list -n myenv
+
+# List packages in environment at path
+conda list -p /path/to/myenv
+```
+
+## Removing Environments
+
+### Remove Entire Environment
+
+<CodeGroup>
+```bash Remove by Name
+# Remove environment by name
+conda env remove -n myenv
+
+# Alternative: use conda remove
+conda remove -n myenv --all
+```
+
+```bash Remove by Path
+# Remove environment at specific path
+conda env remove -p /path/to/myenv
+
+# Alternative
+conda remove -p /path/to/myenv --all
+```
+</CodeGroup>
+
+<Warning>
+Removing an environment deletes **all** files in the environment directory. This action cannot be undone.
+</Warning>
+
+### Protected Packages in Base
+
+Certain packages in the base environment cannot be removed:
+
+<CodeGroup>
+```python Protected Packages
+ROOT_NO_RM = (
+    "python",
+    "pycosat",
+    "ruamel.yaml",
+    "conda",
+    "openssl",
+    "requests",
+)
+```
+</CodeGroup>
+
+## Environment Files
+
+### environment.yml Format
+
+The `environment.yml` file is the standard way to define conda environments:
+
+<CodeGroup>
+```yaml Basic environment.yml
+name: myproject
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - numpy=1.24
+  - pandas>=2.0
+  - matplotlib
+```
+
+```yaml With pip dependencies
+name: myproject
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - numpy
+  - pip
+  - pip:
+    - requests==2.31.0
+    - flask>=2.0
+```
+
+```yaml With environment variables
+name: myproject
+channels:
+  - defaults
+dependencies:
+  - python=3.11
+  - tensorflow
+variables:
+  CUDA_VISIBLE_DEVICES: "0,1"
+  TF_CPP_MIN_LOG_LEVEL: "2"
+```
+</CodeGroup>
+
+### Creating from File
+
+```bash
+# Create environment from file
+conda env create -f environment.yml
+
+# Create with different name
+conda env create -f environment.yml -n custom_name
+
+# Create at specific path
+conda env create -f environment.yml -p /path/to/env
+```
+
+### Exporting Environments
+
+<CodeGroup>
+```bash Export to YAML
+# Export current environment
+conda env export > environment.yml
+
+# Export specific environment
+conda env export -n myenv > environment.yml
+
+# Export without builds (more portable)
+conda env export --no-builds > environment.yml
+
+# Export from history (only explicitly installed)
+conda env export --from-history > environment.yml
+```
+
+```bash Export to requirements.txt
+# Export to pip-style requirements
+conda list --export > requirements.txt
+
+# For specific environment
+conda list -n myenv --export > requirements.txt
+```
+</CodeGroup>
+
+<Tip>
+Use `--from-history` to create more portable environment files that only include packages you explicitly installed, not their dependencies.
+</Tip>
+
+### Explicit Specification Files
+
+For exact environment reproduction, use explicit specifications:
+
+```bash
+# Export explicit spec
+conda list --explicit > spec-file.txt
+
+# Create from explicit spec
+conda create -n myenv --file spec-file.txt
+```
+
+Explicit files contain full URLs to packages and are prefixed with:
+
+<CodeGroup>
+```python Explicit Marker
+EXPLICIT_MARKER = "@EXPLICIT"
+```
+</CodeGroup>
+
+<Info>
+Explicit specifications are platform-specific and guarantee exact reproduction of an environment, including build numbers.
+</Info>
+
+## Environment Metadata
+
+Every conda environment stores metadata in the `conda-meta/` directory:
+
+### History File
+
+```bash
+# View environment history
+cat $CONDA_PREFIX/conda-meta/history
+```
+
+The history file tracks:
+- Installation and update commands
+- Package changes over time
+- Timestamps of operations
+
+<CodeGroup>
+```python History Location
+PREFIX_MAGIC_FILE = join("conda-meta", "history")
+```
+</CodeGroup>
+
+### Other Metadata Files
+
+<CodeGroup>
+```python Metadata Files
+PREFIX_STATE_FILE = join("conda-meta", "state")
+PREFIX_PINNED_FILE = join("conda-meta", "pinned")
+PREFIX_FROZEN_FILE = join("conda-meta", "frozen")
+PREFIX_CREATION_TIMESTAMP_FILE = join("conda-meta", "created_at")
+```
+</CodeGroup>
+
+### Pinned Packages
+
+Pin packages to prevent them from being updated:
+
+```bash
+# Add pinned packages
+echo "numpy ==1.24.*" >> $CONDA_PREFIX/conda-meta/pinned
+echo "python 3.11.*" >> $CONDA_PREFIX/conda-meta/pinned
+```
+
+<Info>
+Pinned packages remain at their specified versions unless explicitly updated.
+</Info>
+
+## Environment Variables
+
+### Setting Environment Variables
+
+Create activation scripts in `etc/conda/env_vars.d/`:
+
+```bash
+# Create directory
+mkdir -p $CONDA_PREFIX/etc/conda/env_vars.d
+
+# Create activation script
+cat > $CONDA_PREFIX/etc/conda/env_vars.d/env_vars.sh << EOF
+export MY_VAR="value"
+export PATH="/custom/path:\$PATH"
+EOF
+```
+
+### Unsetting Variables
+
+To unset a variable when activating:
+
+<CodeGroup>
+```python Unset Marker
+CONDA_ENV_VARS_UNSET_VAR = "***unset***"
+```
+</CodeGroup>
+
+```bash
+echo "export MY_VAR=$CONDA_ENV_VARS_UNSET_VAR" >> $CONDA_PREFIX/etc/conda/env_vars.d/env_vars.sh
+```
+
+<Warning>
+The `PATH` variable is reserved and managed by conda. Custom PATH modifications should be done carefully.
+</Warning>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Separate Environments for Projects">
+    Keep each project in its own environment to avoid dependency conflicts:
+    ```bash
+    conda create -n project1 python=3.11
+    conda create -n project2 python=3.9
+    ```
+  </Accordion>
+  
+  <Accordion title="Use environment.yml for Team Collaboration">
+    Share environment files with your team:
+    ```bash
+    # Export
+    conda env export --from-history > environment.yml
+    
+    # Others can recreate
+    conda env create -f environment.yml
+    ```
+  </Accordion>
+  
+  <Accordion title="Regularly Update Environments">
+    Keep your environments up to date:
+    ```bash
+    conda update -n myenv --all
+    ```
+  </Accordion>
+  
+  <Accordion title="Clean Up Unused Environments">
+    Remove environments you no longer need:
+    ```bash
+    conda env remove -n old_project
+    conda clean --all
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Environment Already Exists">
+    When creating an environment that already exists, conda will prompt you to remove it first:
+    ```bash
+    # Remove and recreate
+    conda env remove -n myenv
+    conda create -n myenv python=3.11
+    ```
+  </Accordion>
+  
+  <Accordion title="Cannot Activate Environment">
+    Ensure conda is properly initialized for your shell:
+    ```bash
+    conda init bash  # or zsh, fish, etc.
+    ```
+    Then restart your shell.
+  </Accordion>
+  
+  <Accordion title="Environment Not Found">
+    Verify the environment exists:
+    ```bash
+    conda env list
+    ```
+    Check both by name and by path.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Package Management" icon="box" href="/user-guide/packages">
+    Learn how to install and manage packages in environments
+  </Card>
+  <Card title="Channel Management" icon="network-wired" href="/user-guide/channels">
+    Configure package channels for your environments
+  </Card>
+</CardGroup>

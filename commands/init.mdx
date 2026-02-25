@@ -1,0 +1,179 @@
+---
+title: conda init
+description: Initialize conda for shell interaction
+---
+
+The `conda init` command initializes conda for shell interaction by modifying your shell configuration files. This enables features like `conda activate` and `conda deactivate`.
+
+## Syntax
+
+```bash
+conda init [options] [SHELLS ...]
+```
+
+## Description
+
+Key parts of conda's functionality require that it interact directly with the shell within which conda is being invoked. The `conda activate` and `conda deactivate` commands specifically are shell-level commands that affect the state (e.g., environment variables) of the shell context. Other core commands like `conda create` and `conda install` also interact with the shell environment in shell-specific ways.
+
+<Warning>
+After running `conda init`, most shells will need to be closed and restarted for changes to take effect.
+</Warning>
+
+## Shell Arguments
+
+You can specify one or more shells to initialize:
+
+```bash
+# Initialize bash
+conda init bash
+
+# Initialize multiple shells
+conda init bash zsh fish
+
+# Initialize all available shells
+conda init --all
+```
+
+**Available shells**: bash, zsh, fish, tcsh, xonsh, cmd.exe, powershell
+
+**Default shells**:
+- Unix/Linux/macOS: `bash`
+- Windows: `cmd.exe` and `powershell`
+
+## Options
+
+### `--all`
+Initialize all currently available shells.
+
+```bash
+conda init --all
+```
+
+### `--user`
+Initialize conda for the current user (default).
+
+```bash
+conda init --user
+```
+
+### `--no-user`
+Don't initialize conda for the current user.
+
+```bash
+conda init --no-user
+```
+
+### `--system`
+Initialize conda for all users on the system. Requires administrator/root privileges.
+
+```bash
+sudo conda init --system bash
+```
+
+### `--reverse`
+Undo effects of the last conda init.
+
+```bash
+conda init --reverse
+```
+
+<Note>
+The `--reverse` option will remove conda initialization from your shell configuration files.
+</Note>
+
+### `--condabin`
+Add the `$CONDA_PREFIX/condabin` directory to the PATH environment variable only. Does not install the full shell function.
+
+The condabin directory contains only the conda executable and does not include other executables from packages installed in the base environment.
+
+```bash
+conda init --condabin
+```
+
+On most shells, a small snippet is added to the shell profile. For CMD on Windows, the PATH environment variable is modified directly in the registry.
+
+### `-d, --dry-run`
+Only display what would have been done without making any changes.
+
+```bash
+conda init --dry-run bash
+```
+
+### `--json`
+Report all output as JSON.
+
+### `--anaconda-prompt` (Windows only)
+Add an 'Anaconda Prompt' icon to your desktop.
+
+```bash
+conda init --anaconda-prompt
+```
+
+## Common Use Cases
+
+### Initialize conda for your shell
+
+On Unix/Linux/macOS:
+```bash
+conda init bash
+```
+
+On Windows (PowerShell):
+```bash
+conda init powershell
+```
+
+Then restart your shell or terminal.
+
+### Preview changes before applying
+
+See what files will be modified:
+
+```bash
+conda init --dry-run
+```
+
+### Initialize all shells
+
+If you use multiple shells:
+
+```bash
+conda init --all
+```
+
+### Undo conda initialization
+
+Remove conda from your shell configuration:
+
+```bash
+conda init --reverse
+```
+
+### Minimal PATH-only setup
+
+If you only want conda in your PATH without the full activation setup:
+
+```bash
+conda init --condabin
+```
+
+## What Gets Modified
+
+Depending on your shell, `conda init` modifies one or more of the following files:
+
+- **bash**: `~/.bashrc`, `~/.bash_profile`
+- **zsh**: `~/.zshrc`
+- **fish**: `~/.config/fish/config.fish`
+- **tcsh**: `~/.tcshrc`, `~/.cshrc`
+- **xonsh**: `~/.xonshrc`
+- **powershell**: PowerShell profile
+- **cmd.exe**: Windows registry (HKEY_CURRENT_USER or HKEY_LOCAL_MACHINE)
+
+The modifications add code to:
+1. Add conda to your PATH
+2. Set up shell functions for `conda activate` and `conda deactivate`
+3. Configure conda shell integration
+
+<Note>
+You can view the exact changes that will be made by using the `--dry-run` flag before running the actual command.
+</Note>

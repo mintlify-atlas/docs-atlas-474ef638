@@ -1,0 +1,268 @@
+---
+title: Core Concepts
+description: Understanding conda's fundamental concepts and architecture
+---
+
+## What is Conda?
+
+Conda is a cross-platform, language-agnostic package and environment manager. It helps you install, update, and manage packages and their dependencies, while keeping different projects isolated in separate environments.
+
+<Info>
+Conda is developed by Anaconda, Inc. and is open source. Visit the [official conda website](https://conda.io) for more information.
+</Info>
+
+## Packages vs Environments
+
+### Packages
+
+A **package** is a bundled archive file containing:
+- Compiled software libraries and executables
+- Configuration files
+- Metadata about dependencies and versions
+- Package information in JSON format
+
+Conda supports two package formats:
+- `.conda` - The modern, faster package format (v2)
+- `.tar.bz2` - The legacy package format (v1)
+
+<CodeGroup>
+```bash Package Installation
+# Install a single package
+conda install numpy
+
+# Install specific version
+conda install python=3.11
+
+# Install multiple packages
+conda install scipy curl wheel
+```
+</CodeGroup>
+
+### Environments
+
+An **environment** is an isolated directory containing:
+- A specific collection of packages
+- Its own Python/R interpreter (if applicable)
+- All dependencies for those packages
+- Configuration and metadata in the `conda-meta/` directory
+
+Environments allow you to:
+- Keep dependencies for different projects separate
+- Use different versions of packages for different projects
+- Avoid conflicts between package requirements
+
+<Note>
+The default environment is called `base` (defined as `ROOT_ENV_NAME` in the source). This is a reserved environment name along with `root`.
+</Note>
+
+## Channels and Repositories
+
+### What are Channels?
+
+A **channel** is a repository location where conda looks for packages. Channels are URLs that point to directories containing package files and metadata.
+
+### Default Channels
+
+Conda uses different default channels depending on your platform:
+
+<Tabs>
+  <Tab title="Unix/Linux/macOS">
+    ```python
+    DEFAULT_CHANNELS_UNIX = (
+        "https://repo.anaconda.com/pkgs/main",
+        "https://repo.anaconda.com/pkgs/r",
+    )
+    ```
+  </Tab>
+  <Tab title="Windows">
+    ```python
+    DEFAULT_CHANNELS_WIN = (
+        "https://repo.anaconda.com/pkgs/main",
+        "https://repo.anaconda.com/pkgs/r",
+        "https://repo.anaconda.com/pkgs/msys2",
+    )
+    ```
+  </Tab>
+</Tabs>
+
+The default channel alias is `https://conda.anaconda.org`.
+
+### Channel Priority
+
+Conda uses a channel priority system to determine which package to install when multiple channels have the same package:
+
+- **Strict**: Install packages only from the highest priority channel that has them
+- **Flexible**: Consider version and build information across all channels
+- **Disabled**: No channel priority enforcement
+
+<CodeGroup>
+```python Channel Priority Values
+class ChannelPriority(ValueEnum):
+    STRICT = "strict"
+    FLEXIBLE = "flexible"
+    DISABLED = "disabled"
+```
+</CodeGroup>
+
+<Warning>
+The maximum channel priority value is 10000, reserved for packages that need to be removed or have highest priority.
+</Warning>
+
+## Prefix and Environment Paths
+
+### What is a Prefix?
+
+A **prefix** is the filesystem path where an environment is installed. Every conda environment has a unique prefix directory.
+
+<CodeGroup>
+```bash Example Prefixes
+# Default base environment
+/opt/anaconda3
+
+# Named environment
+/opt/anaconda3/envs/myproject
+
+# Custom location
+/home/user/projects/ml_project/.conda
+```
+</CodeGroup>
+
+### Prefix Structure
+
+Every conda prefix contains:
+
+```
+prefix/
+├── bin/              # Executables and scripts
+├── lib/              # Libraries
+├── include/          # Header files
+├── conda-meta/       # Environment metadata
+│   ├── history       # Installation history (PREFIX_MAGIC_FILE)
+│   ├── state         # Environment state
+│   ├── pinned        # Pinned packages
+│   ├── frozen        # Frozen environment marker
+│   └── created_at    # Creation timestamp
+├── etc/
+│   └── conda/
+│       └── env_vars.d/  # Environment variables
+└── share/            # Shared data files
+```
+
+### Environment Variables
+
+Conda environments can define custom environment variables in the `etc/conda/env_vars.d/` directory.
+
+<CodeGroup>
+```python Special Environment Variable
+# Value to unset a variable
+CONDA_ENV_VARS_UNSET_VAR = "***unset***"
+
+# Reserved variables (cannot be modified)
+RESERVED_ENV_VARS = ("PATH",)
+```
+</CodeGroup>
+
+### Prefix Placeholder
+
+During package builds, conda uses a prefix placeholder for binary patching:
+
+```python
+PREFIX_PLACEHOLDER = "/opt/anaconda1anaconda2anaconda3"
+```
+
+This placeholder is replaced with the actual prefix path during installation.
+
+## Supported Platforms
+
+Conda supports multiple platforms and architectures:
+
+<CodeGroup>
+```python Supported Platforms
+PLATFORMS = (
+    "emscripten-wasm32",
+    "wasi-wasm32",
+    "freebsd-64",
+    "linux-32",
+    "linux-64",
+    "linux-aarch64",
+    "linux-armv6l",
+    "linux-armv7l",
+    "linux-ppc64",
+    "linux-ppc64le",
+    "linux-riscv64",
+    "linux-s390x",
+    "osx-64",
+    "osx-arm64",
+    "win-32",
+    "win-64",
+    "win-arm64",
+    "zos-z",
+)
+```
+</CodeGroup>
+
+Each platform has a `noarch` subdirectory for platform-independent packages.
+
+## Configuration Files
+
+Conda searches for configuration files (`.condarc`) in multiple locations:
+
+<Tabs>
+  <Tab title="Unix/Linux/macOS">
+    ```python
+    SEARCH_PATH = (
+        "/etc/conda/.condarc",
+        "/etc/conda/condarc",
+        "/etc/conda/condarc.d/",
+        "/var/lib/conda/.condarc",
+        "/var/lib/conda/condarc",
+        "/var/lib/conda/condarc.d/",
+        "$CONDA_ROOT/.condarc",
+        "$CONDA_ROOT/condarc",
+        "$CONDA_ROOT/condarc.d/",
+        "$XDG_CONFIG_HOME/conda/.condarc",
+        "$XDG_CONFIG_HOME/conda/condarc",
+        "$XDG_CONFIG_HOME/conda/condarc.d/",
+        "~/.config/conda/.condarc",
+        "~/.config/conda/condarc",
+        "~/.config/conda/condarc.d/",
+        "~/.conda/.condarc",
+        "~/.conda/condarc",
+        "~/.conda/condarc.d/",
+        "~/.condarc",
+        "$CONDA_PREFIX/.condarc",
+        "$CONDA_PREFIX/condarc",
+        "$CONDA_PREFIX/condarc.d/",
+        "$CONDARC",
+    )
+    ```
+  </Tab>
+  <Tab title="Windows">
+    ```python
+    SEARCH_PATH = (
+        "C:/ProgramData/conda/.condarc",
+        "C:/ProgramData/conda/condarc",
+        "C:/ProgramData/conda/condarc.d",
+        # ... plus the common paths above
+    )
+    ```
+  </Tab>
+</Tabs>
+
+<Tip>
+Configuration files are loaded in order, with later files overriding earlier ones. The `$CONDARC` environment variable takes highest precedence.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Environment Management" icon="layer-group" href="/user-guide/environments">
+    Learn how to create and manage conda environments
+  </Card>
+  <Card title="Package Management" icon="box" href="/user-guide/packages">
+    Install, update, and remove packages
+  </Card>
+  <Card title="Channel Management" icon="network-wired" href="/user-guide/channels">
+    Configure and manage package channels
+  </Card>
+</CardGroup>

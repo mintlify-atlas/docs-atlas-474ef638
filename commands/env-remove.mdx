@@ -1,0 +1,381 @@
+---
+title: conda env remove
+description: Remove a conda environment
+---
+
+## Overview
+
+The `conda env remove` command removes (deletes) a conda environment and all of its installed packages. This operation is destructive and cannot be undone.
+
+<Warning>
+**Destructive Operation**
+
+This command permanently deletes the environment and all its contents. Make sure to deactivate the environment before removing it.
+</Warning>
+
+## Syntax
+
+```bash
+conda env remove [options]
+```
+
+## Target Environment Specification
+
+<ParamField path="-n, --name" type="string">
+  Name of environment to remove.
+  
+  <Note>
+  You must specify either `-n` or `-p` to identify the environment to remove.
+  </Note>
+</ParamField>
+
+<ParamField path="-p, --prefix" type="string">
+  Full path to environment location (i.e. prefix) to remove.
+</ParamField>
+
+## Protection Options
+
+<ParamField path="--override-frozen" type="boolean">
+  DANGEROUS. Use at your own risk. Ignore protections if the environment is frozen.
+  
+  <Warning>
+  Frozen environments are typically protected to prevent accidental deletion. Only use this flag if you're certain you want to remove a frozen environment.
+  </Warning>
+</ParamField>
+
+## Output Options
+
+<ParamField path="--json" type="boolean">
+  Report all output as JSON. Suitable for using conda programmatically.
+</ParamField>
+
+<ParamField path="-y, --yes" type="boolean">
+  Do not ask for confirmation. Automatically answer 'yes' to all prompts.
+  
+  <Tip>
+  Useful in scripts and automated workflows where interactive prompts should be avoided.
+  </Tip>
+</ParamField>
+
+<ParamField path="-v, --verbose" type="boolean">
+  Can be used multiple times. Once for INFO, twice for DEBUG, three times for TRACE.
+</ParamField>
+
+<ParamField path="-q, --quiet" type="boolean">
+  Do not display progress bar.
+</ParamField>
+
+<ParamField path="-d, --dry-run" type="boolean">
+  Only display what would have been done without actually removing the environment.
+</ParamField>
+
+## Solver Options
+
+<ParamField path="--solver" type="string">
+  Choose which solver backend to use (primarily for consistency with other commands).
+</ParamField>
+
+## Examples
+
+### Remove environment by name
+
+```bash
+conda env remove -n myenv
+```
+
+Removes the environment named `myenv` from the default envs directory.
+
+### Remove environment by path
+
+```bash
+conda env remove -p /path/to/env
+```
+
+Removes the environment at the specified path.
+
+### Remove without confirmation
+
+```bash
+conda env remove -n myenv -y
+```
+
+Removes the environment without prompting for confirmation.
+
+### Remove frozen environment
+
+```bash
+conda env remove -n myenv --override-frozen
+```
+
+Removes a frozen environment (use with caution).
+
+### Dry run to preview
+
+```bash
+conda env remove -n myenv --dry-run
+```
+
+Shows what would be removed without actually deleting anything.
+
+### Remove with verbose output
+
+```bash
+conda env remove -n myenv -v
+```
+
+Shows detailed information during the removal process.
+
+### Remove with JSON output
+
+```bash
+conda env remove -n myenv --json
+```
+
+Outputs removal status in JSON format for programmatic use.
+
+## Common Use Cases
+
+<AccordionGroup>
+  <Accordion title="Clean up old environments">
+    Remove environments you no longer need:
+    
+    ```bash
+    # List all environments first
+    conda env list
+    
+    # Remove old ones
+    conda env remove -n old-project
+    conda env remove -n test-env
+    ```
+  </Accordion>
+
+  <Accordion title="Free up disk space">
+    Check environment sizes and remove large unused ones:
+    
+    ```bash
+    # Check sizes
+    conda env list --size
+    
+    # Remove large unused environment
+    conda env remove -n large-env
+    ```
+  </Accordion>
+
+  <Accordion title="Remove before recreating">
+    Remove and recreate an environment with fresh packages:
+    
+    ```bash
+    conda env remove -n myenv
+    conda env create -f environment.yml
+    ```
+  </Accordion>
+
+  <Accordion title="Automated cleanup in scripts">
+    Remove temporary environments in CI/CD pipelines:
+    
+    ```bash
+    #!/bin/bash
+    # Create temporary test environment
+    conda create -n test-$BUILD_ID python=3.11 pytest
+    
+    # Run tests
+    conda run -n test-$BUILD_ID pytest
+    
+    # Clean up
+    conda env remove -n test-$BUILD_ID -y
+    ```
+  </Accordion>
+
+  <Accordion title="Remove corrupted environments">
+    If an environment becomes corrupted, remove and recreate it:
+    
+    ```bash
+    conda env remove -n corrupted-env -y
+    conda env create -n corrupted-env -f backup-environment.yml
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Safety Checks
+
+Before removing an environment, conda performs several checks:
+
+<Steps>
+  <Step title="Environment must exist">
+    Conda verifies the environment exists before attempting removal.
+  </Step>
+  
+  <Step title="Environment must be inactive">
+    You cannot remove the currently active environment. Deactivate it first:
+    ```bash
+    conda deactivate
+    conda env remove -n myenv
+    ```
+  </Step>
+  
+  <Step title="Frozen environment protection">
+    Frozen environments cannot be removed unless `--override-frozen` is used.
+  </Step>
+  
+  <Step title="Confirmation prompt">
+    Unless `-y` is specified, conda will ask for confirmation before deletion.
+  </Step>
+</Steps>
+
+## What Gets Removed
+
+When you remove an environment, conda deletes:
+
+- All installed packages
+- Python interpreter
+- All conda-managed files
+- Environment-specific configuration files
+- Activation/deactivation scripts
+- Any files in the environment directory
+
+<Warning>
+**All files are deleted**
+
+This includes any files you may have manually added to the environment directory. Back up important files before removing an environment.
+</Warning>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Cannot remove active environment">
+    Deactivate the environment first:
+    
+    ```bash
+    conda deactivate
+    conda env remove -n myenv
+    ```
+    
+    If you have stacked environments, deactivate all of them:
+    
+    ```bash
+    conda deactivate
+    conda deactivate  # Repeat as needed
+    conda env remove -n myenv
+    ```
+  </Accordion>
+
+  <Accordion title="Environment not found">
+    Verify the environment exists:
+    
+    ```bash
+    conda env list
+    ```
+    
+    Use the exact name or full path shown in the list:
+    
+    ```bash
+    conda env remove -n exact-name
+    # or
+    conda env remove -p /full/path/shown/in/list
+    ```
+  </Accordion>
+
+  <Accordion title="Permission denied">
+    If you get permission errors:
+    
+    1. Ensure you have write permissions to the environment directory
+    2. Close any programs that might be using files in the environment
+    3. On Windows, ensure no processes are running from that environment
+  </Accordion>
+
+  <Accordion title="Frozen environment protection">
+    If the environment is frozen:
+    
+    ```bash
+    conda env remove -n myenv --override-frozen
+    ```
+    
+    <Warning>
+    Only use this if you're certain. Frozen environments are protected for a reason.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="Partial removal or errors">
+    If removal fails partway through:
+    
+    1. Try running the command again
+    2. Manually remove the directory:
+    ```bash
+    # Get the path
+    conda env list
+    # Remove manually (use with caution)
+    rm -rf /path/to/env
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Export Before Removing" icon="download">
+    Save environment specifications before removal:
+    ```bash
+    conda env export -n myenv > myenv-backup.yml
+    conda env remove -n myenv
+    ```
+  </Card>
+  
+  <Card title="Verify Before Deleting" icon="check">
+    Double-check you're removing the correct environment:
+    ```bash
+    conda env list
+    conda env remove -n correct-env-name
+    ```
+  </Card>
+  
+  <Card title="Use Dry Run First" icon="eye">
+    Preview what will be removed:
+    ```bash
+    conda env remove -n myenv --dry-run
+    ```
+  </Card>
+  
+  <Card title="Deactivate First" icon="circle-xmark">
+    Always deactivate before removing:
+    ```bash
+    conda deactivate
+    conda env remove -n myenv
+    ```
+  </Card>
+</CardGroup>
+
+## Alternatives to Removal
+
+Before removing an environment, consider these alternatives:
+
+### Clean the environment
+
+```bash
+conda clean -n myenv --all
+```
+
+Removes unused packages and caches without deleting the environment.
+
+### Update instead of recreate
+
+```bash
+conda env update -n myenv -f environment.yml --prune
+```
+
+Updates the environment to match a specification file.
+
+### Clone for backup
+
+```bash
+conda create -n myenv-backup --clone myenv
+```
+
+Create a backup before making destructive changes.
+
+## Related Commands
+
+- [`conda env create`](/commands/env-create) - Create a new environment
+- [`conda env export`](/commands/env-export) - Export environment for backup
+- [`conda clean`](/commands/clean) - Clean packages and caches without removing environment
+- `conda deactivate` - Deactivate environment before removal
+- [`conda env list`](/commands/env-list) - List all environments

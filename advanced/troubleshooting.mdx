@@ -1,0 +1,371 @@
+---
+title: Troubleshooting
+description: Common issues, error messages, and debugging tips for conda
+---
+
+This guide covers common issues you may encounter when using conda and how to resolve them.
+
+## Common Issues
+
+### Environment Not Found
+
+If you encounter an environment not found error:
+
+<CodeGroup>
+```bash Error Message
+CondaError: Could not find conda environment: myenv
+You can list all discoverable environments with `conda info --envs`.
+```
+
+```bash Solution
+# List all available environments
+conda info --envs
+
+# Or create the environment if it doesn't exist
+conda create -n myenv python=3.11
+```
+</CodeGroup>
+
+### Package Not Found
+
+<Warning>
+The `PackagesNotFoundError` occurs when conda cannot find a package in the configured channels.
+</Warning>
+
+From `conda/exceptions.py:740`:
+
+```python
+class PackagesNotFoundError(CondaError):
+    """The following packages are not available from current channels"""
+```
+
+**Solutions:**
+
+1. Search for alternate channels at [anaconda.org](https://anaconda.org)
+2. Add additional channels:
+   ```bash
+   conda config --append channels conda-forge
+   ```
+3. Check if `use_only_tar_bz2` is enabled (may omit packages)
+
+### Channel Issues
+
+#### Channel Not Accessible
+
+<Info>
+Conda validates that channels are accessible and contain valid repodata. File-based channels must include `noarch/repodata.json`.
+</Info>
+
+```bash
+# Check your channel configuration
+conda config --show channels
+
+# View config file locations
+conda config --show-sources
+```
+
+#### Channel Not Allowed
+
+From `conda/exceptions.py:518`:
+
+```python
+class ChannelNotAllowed(ChannelError):
+    """Channel not included in allowlist"""
+```
+
+Check your organization's channel policies if you encounter this error.
+
+## Error Types Reference
+
+### Dependency Errors
+
+<Accordion title="UnsatisfiableError">
+  Occurs when conda cannot find a combination of packages that satisfies all requirements.
+  
+  **Common causes:**
+  - Conflicting version requirements
+  - Python version incompatibility
+  - Strict channel priority removing required packages
+  
+  **Debug tips:**
+  ```bash
+  # Enable detailed unsatisfiable hints
+  conda config --set unsatisfiable_hints True
+  
+  # Try with channel priority disabled
+  conda install <package> --channel-priority disabled
+  ```
+</Accordion>
+
+<Accordion title="CyclicalDependencyError">
+  From `conda/exceptions.py:1038`:
+  
+  ```python
+  class CyclicalDependencyError(CondaError, ValueError):
+      """Cyclic dependencies exist among these items"""
+  ```
+  
+  This indicates a circular dependency in the package graph. Contact package maintainers.
+</Accordion>
+
+### Permission Errors
+
+<AccordionGroup>
+  <Accordion title="NotWritableError">
+    The current user doesn't have write permissions to a required path.
+    
+    ```bash
+    # On Linux/macOS, fix with (use cautiously):
+    sudo chown $UID:$(id -g) /path/to/conda
+    
+    # Better: use a user-writable prefix
+    conda create -p ~/my-envs/myenv
+    ```
+  </Accordion>
+  
+  <Accordion title="EnvironmentNotWritableError">
+    Cannot modify the target environment due to permission restrictions.
+    
+    **Solutions:**
+    - Use a different environment location
+    - Request administrator access
+    - Use `--prefix` to specify a writable location
+  </Accordion>
+</AccordionGroup>
+
+### Environment Errors
+
+<Card title="CorruptedEnvironmentError" icon="triangle-exclamation">
+  From `conda/exceptions.py:1049`:
+  
+  Corrupted environments commonly occur when the conda process is force-terminated during an unlink-link transaction.
+  
+  ```bash
+  # Remove and recreate the environment
+  conda remove -n myenv --all
+  conda create -n myenv python=3.11
+  ```
+</Card>
+
+## Connection and Download Issues
+
+### HTTP Errors
+
+<Steps>
+  <Step title="Check Network Connection">
+    Verify you can access the internet and conda channels.
+  </Step>
+  
+  <Step title="Proxy Configuration">
+    From `conda/exceptions.py:479`:
+    
+    ```python
+    class ProxyError(CondaError):
+        """Error in proxy configuration"""
+    ```
+    
+    Check for typos in:
+    - `.netrc` file in your home directory
+    - Environment variables ending in `_PROXY`
+    - System-wide proxy settings
+  </Step>
+  
+  <Step title="SSL/TLS Issues">
+    ```bash
+    # Temporarily disable SSL verification (not recommended for production)
+    conda config --set ssl_verify false
+    
+    # Or specify a custom CA bundle
+    conda config --set ssl_verify /path/to/ca-bundle.crt
+    ```
+  </Step>
+</Steps>
+
+### Checksum Mismatch
+
+From `conda/exceptions.py:630`:
+
+```python
+class ChecksumMismatchError(CondaError):
+    """Conda detected a mismatch between expected and downloaded content"""
+```
+
+**Actions:**
+1. Retry the operation (temporary network issue)
+2. Clear the package cache: `conda clean --all`
+3. Report to the channel maintainer if it persists
+
+## Path and File Conflicts
+
+### Clobber Errors
+
+<Tip>
+Clobber errors occur when conda tries to overwrite existing files.
+</Tip>
+
+From `conda/exceptions.py:176`:
+
+```python
+class ClobberError(CondaError):
+    """Conda was asked to clobber an existing path"""
+```
+
+**Types:**
+- `KnownPackageClobberError`: Path collision with another conda package
+- `UnknownPackageClobberError`: Path collision with non-conda file
+- `SharedLinkPathClobberError`: Multiple packages want the same path
+
+**Solution:**
+```bash
+# Use --clobber flag to override (use cautiously)
+conda install <package> --clobber
+```
+
+## Debugging Tips
+
+### Enable Debug Mode
+
+<CodeGroup>
+```bash Command Line
+# Run any conda command with verbose output
+conda install <package> --debug
+
+# Or with detailed info
+conda install <package> --verbose
+```
+
+```bash Environment Variable
+# Enable debug mode for all conda commands
+export CONDA_DEBUG=1
+```
+</CodeGroup>
+
+### Collect Environment Information
+
+```bash
+# Get detailed conda information
+conda info --all
+
+# List installed packages
+conda list
+
+# Check environment history
+conda list --revisions
+```
+
+### Use JSON Output
+
+<Info>
+JSON output is useful for programmatic error handling and reporting.
+</Info>
+
+```bash
+conda search <package> --json
+conda list --json
+conda info --json
+```
+
+### Check Configuration
+
+```bash
+# Show all configuration values
+conda config --show
+
+# Show configuration file sources
+conda config --show-sources
+
+# Validate configuration
+conda config --validate
+```
+
+## Memory and Space Issues
+
+<CardGroup cols={2}>
+  <Card title="NoSpaceLeftError" icon="hard-drive">
+    Free up disk space or use a different package cache directory:
+    
+    ```bash
+    conda config --add pkgs_dirs /path/with/space
+    ```
+  </Card>
+  
+  <Card title="CondaMemoryError" icon="memory">
+    From `conda/exceptions.py:1095`:
+    
+    Increase system memory or use a more efficient solver:
+    ```bash
+    conda install <package> --solver libmamba
+    ```
+  </Card>
+</CardGroup>
+
+## Command-Specific Issues
+
+### Activation Issues
+
+<Warning>
+If `conda activate` doesn't work, your shell hasn't been properly configured.
+</Warning>
+
+From `conda/exceptions.py:299`:
+
+```python
+class CommandNotFoundError(CondaError):
+    """Your shell has not been properly configured to use 'conda activate'"""
+```
+
+**Solution:**
+```bash
+# Initialize your shell
+conda init <SHELL_NAME>
+
+# Supported shells: bash, zsh, fish, tcsh, xonsh, cmd.exe, powershell
+
+# Then restart your shell
+```
+
+### Lock Errors
+
+From `conda/exceptions.py:73`:
+
+```python
+class LockError(CondaError, OSError):
+    """Another conda process is running"""
+```
+
+**Solutions:**
+1. Wait for the other conda process to complete
+2. If stuck, manually remove lock files (use with caution):
+   ```bash
+   rm -f ~/miniconda3/.conda_lock
+   ```
+
+## Getting Help
+
+<CardGroup cols={2}>
+  <Card title="Community Support" icon="users">
+    - [Conda GitHub Issues](https://github.com/conda/conda/issues)
+    - [Conda Discourse Forum](https://conda.discourse.group/)
+  </Card>
+  
+  <Card title="Report a Bug" icon="bug">
+    Include the output of:
+    ```bash
+    conda info
+    conda list
+    conda config --show-sources
+    ```
+  </Card>
+</CardGroup>
+
+<Note>
+For emergency recovery, you can always recreate your environment from an exported environment file:
+
+```bash
+# Export current environment (if accessible)
+conda env export > environment.yml
+
+# Later, recreate it
+conda env create -f environment.yml
+```
+</Note>

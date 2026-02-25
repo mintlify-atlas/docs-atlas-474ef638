@@ -1,0 +1,236 @@
+---
+title: conda remove
+description: Remove packages from a conda environment
+---
+
+## Overview
+
+The `conda remove` command removes a list of packages from a specified conda environment. This command will also remove any package that depends on any of the specified packages as well, unless a replacement can be found without that dependency.
+
+Use the `--all` flag to remove all packages and the environment itself.
+
+## Syntax
+
+```bash
+conda remove [options] [package_name ...]
+```
+
+## Target Environment Specification
+
+<ParamField path="-n, --name" type="string">
+  Name of environment.
+</ParamField>
+
+<ParamField path="-p, --prefix" type="string">
+  Full path to environment location (i.e. prefix).
+</ParamField>
+
+## Package Specifications
+
+<ParamField path="package_name" type="string">
+  Package names to remove from the environment. Can be multiple packages separated by spaces.
+</ParamField>
+
+<ParamField path="--all" type="boolean">
+  Remove all packages, i.e., the entire environment.
+</ParamField>
+
+<ParamField path="--keep-env" type="boolean">
+  Used with `--all`, delete all packages but keep the environment.
+</ParamField>
+
+## Solver Mode Modifiers
+
+<ParamField path="--features" type="boolean">
+  Remove features (instead of packages).
+</ParamField>
+
+<ParamField path="--force-remove, --force" type="boolean">
+  Forces removal of a package without removing packages that depend on it. Using this option will usually leave your environment in a broken and inconsistent state.
+</ParamField>
+
+<ParamField path="--no-pin" type="boolean">
+  Ignore pinned package(s) that apply to the current operation. These pinned packages might come from a .condarc file or a file in `<TARGET_ENVIRONMENT>/conda-meta/pinned`.
+</ParamField>
+
+<ParamField path="--solver" type="string">
+  Choose which solver backend to use.
+</ParamField>
+
+## Channel Customization
+
+<ParamField path="-c, --channel" type="string">
+  Additional channel to search for packages. These are URLs searched in the order they are given (including local directories using the `file://` syntax or simply a path like `/home/conda/mychan` or `../mychan`). Can be used multiple times.
+</ParamField>
+
+<ParamField path="--use-local" type="boolean">
+  Use locally built packages. Identical to `-c local`.
+</ParamField>
+
+<ParamField path="-O, --override-channels" type="boolean">
+  Do not search default or .condarc channels. Requires --channel.
+</ParamField>
+
+<ParamField path="--repodata-fn" type="string">
+  Specify file name of repodata on the remote server. Can be passed multiple times.
+</ParamField>
+
+<ParamField path="--experimental" type="string">
+  Enable experimental features. Options: `jlap` (download incremental package index data), `lock` (use locking when reading/updating index cache).
+</ParamField>
+
+<ParamField path="--no-lock" type="boolean">
+  Disable locking when reading, updating index (repodata.json) cache.
+</ParamField>
+
+<ParamField path="--repodata-use-zst / --no-repodata-use-zst" type="boolean">
+  Check for/do not check for repodata.json.zst. Enabled by default.
+</ParamField>
+
+## Networking Options
+
+<ParamField path="-C, --use-index-cache" type="boolean">
+  Use cache of channel index files, even if it has expired. This is useful if you don't want conda to check whether a new version of the repodata file exists.
+</ParamField>
+
+<ParamField path="-k, --insecure" type="boolean">
+  Allow conda to perform "insecure" SSL connections and transfers. Equivalent to setting `ssl_verify` to `false`.
+</ParamField>
+
+<ParamField path="--offline" type="boolean">
+  Offline mode. Don't connect to the Internet.
+</ParamField>
+
+## Output, Prompt, and Flow Control Options
+
+<ParamField path="--json" type="boolean">
+  Report all output as json. Suitable for using conda programmatically.
+</ParamField>
+
+<ParamField path="-v, --verbose" type="boolean">
+  Can be used multiple times. Once for detailed output, twice for INFO logging, thrice for DEBUG logging, four times for TRACE logging.
+</ParamField>
+
+<ParamField path="-q, --quiet" type="boolean">
+  Do not display progress bar.
+</ParamField>
+
+<ParamField path="-d, --dry-run" type="boolean">
+  Only display what would have been done.
+</ParamField>
+
+<ParamField path="-y, --yes" type="boolean">
+  Sets any confirmation values to 'yes' automatically. Users will not be asked to confirm any adding, deleting, backups, etc.
+</ParamField>
+
+## Environment Protection
+
+<ParamField path="--override-frozen" type="boolean">
+  DANGEROUS. Use at your own risk. Ignore protections if the environment is frozen.
+</ParamField>
+
+## Examples
+
+<CodeGroup>
+```bash Remove single package
+conda remove scipy
+```
+
+```bash Remove from specific environment
+conda remove -n myenv scipy curl wheel
+```
+
+```bash Remove all packages and environment
+conda remove -n myenv --all
+```
+
+```bash Remove all packages but keep environment
+conda remove -n myenv --all --keep-env
+```
+
+```bash Remove multiple packages
+conda remove numpy pandas matplotlib
+```
+
+```bash Force remove package
+conda remove --force scipy
+```
+
+```bash Dry run to preview removal
+conda remove --dry-run scikit-learn
+```
+
+```bash Remove with confirmation
+conda remove -y requests
+```
+</CodeGroup>
+
+## Common Use Cases
+
+### Removing a Single Package
+
+Remove a package from the current environment:
+
+```bash
+conda remove scipy
+```
+
+### Removing Multiple Packages
+
+Remove several packages at once:
+
+```bash
+conda remove numpy pandas matplotlib scikit-learn
+```
+
+### Removing from a Specific Environment
+
+Remove packages from a named environment:
+
+```bash
+conda remove -n data-science jupyter notebook
+```
+
+### Removing an Entire Environment
+
+Delete all packages and the environment itself:
+
+```bash
+conda remove -n old-env --all
+```
+
+### Clearing an Environment
+
+Remove all packages but keep the environment structure:
+
+```bash
+conda remove -n myenv --all --keep-env
+```
+
+### Force Removing a Package
+
+Remove a package without checking dependencies (use with caution):
+
+```bash
+conda remove --force problematic-package
+```
+
+### Previewing Package Removal
+
+See what would be removed without actually removing:
+
+```bash
+conda remove --dry-run tensorflow
+```
+
+<Warning>
+  Using `--force-remove` or `--force` will usually leave your environment in a broken and inconsistent state. Use this option with extreme caution.
+</Warning>
+
+<Note>
+  If you wish to skip dependency checking and remove just the requested packages, add the `--force` option. However, this may result in a broken environment, so use this with caution.
+</Note>
+
+<Info>
+  The `conda remove` command automatically removes dependent packages unless a suitable replacement can be found. This helps maintain environment consistency.
+</Info>

@@ -1,0 +1,200 @@
+---
+title: conda env list
+description: List all conda environments
+---
+
+## Overview
+
+The `conda env list` command lists all available conda environments on your system. This is an alias for `conda info --envs`.
+
+## Syntax
+
+```bash
+conda env list [options]
+```
+
+## Options
+
+<ParamField path="--json" type="boolean">
+  Report all output as JSON. Suitable for using conda programmatically.
+  
+  The JSON output includes:
+  - List of environment paths
+  - The currently active environment
+</ParamField>
+
+<ParamField path="--size" type="boolean">
+  Show conda-managed disk usage for each environment. This excludes untracked files created after installation.
+  
+  <Note>
+  Calculating sizes may take some time for environments with many packages.
+  </Note>
+</ParamField>
+
+<ParamField path="-v, --verbose" type="boolean">
+  Use once for INFO, twice for DEBUG, three times for TRACE.
+</ParamField>
+
+<ParamField path="-q, --quiet" type="boolean">
+  Do not display progress bar.
+</ParamField>
+
+## Output Format
+
+The standard output shows:
+- Environment name or path
+- Full path to the environment
+- An asterisk (*) next to the currently active environment
+
+### Standard Output Example
+
+```
+# conda environments:
+#
+base                  *  /home/user/miniconda3
+myenv                    /home/user/miniconda3/envs/myenv
+project1                 /home/user/miniconda3/envs/project1
+test-env                 /opt/conda/envs/test-env
+```
+
+### JSON Output Example
+
+```json
+{
+  "envs": [
+    "/home/user/miniconda3",
+    "/home/user/miniconda3/envs/myenv",
+    "/home/user/miniconda3/envs/project1",
+    "/opt/conda/envs/test-env"
+  ],
+  "envs_dirs": [
+    "/home/user/miniconda3/envs",
+    "/home/user/.conda/envs"
+  ]
+}
+```
+
+## Examples
+
+### List all environments
+
+```bash
+conda env list
+```
+
+Shows all environments with their paths and indicates the active one.
+
+### List environments with JSON output
+
+```bash
+conda env list --json
+```
+
+Outputs environment information in JSON format for programmatic use.
+
+### List environments with size information
+
+```bash
+conda env list --size
+```
+
+Displays each environment with its disk usage:
+
+```
+# conda environments:
+#
+base                  *  /home/user/miniconda3         1.2 GB
+myenv                    /home/user/miniconda3/envs/myenv    456 MB
+project1                 /home/user/miniconda3/envs/project1 789 MB
+```
+
+### Quiet output
+
+```bash
+conda env list --quiet
+```
+
+Suppresses the progress bar and additional information.
+
+## Common Use Cases
+
+<AccordionGroup>
+  <Accordion title="Find environment locations">
+    Use `conda env list` to find the full path to an environment:
+    
+    ```bash
+    conda env list | grep myenv
+    ```
+  </Accordion>
+
+  <Accordion title="Check which environment is active">
+    The active environment is marked with an asterisk:
+    
+    ```bash
+    conda env list
+    # Look for the * symbol
+    ```
+  </Accordion>
+
+  <Accordion title="Programmatic environment discovery">
+    Use JSON output in scripts:
+    
+    ```bash
+    conda env list --json | jq '.envs[]'
+    ```
+  </Accordion>
+
+  <Accordion title="Audit disk usage">
+    Check which environments are using the most space:
+    
+    ```bash
+    conda env list --size
+    ```
+  </Accordion>
+
+  <Accordion title="Verify environment creation">
+    After creating an environment, verify it appears:
+    
+    ```bash
+    conda create -n newenv python=3.11
+    conda env list | grep newenv
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Environment Search Locations
+
+Conda searches for environments in these directories (in order):
+
+1. **envs_dirs** from .condarc configuration
+2. Default locations:
+   - `$CONDA_ROOT/envs` - Default environment directory
+   - `~/.conda/envs` - User environment directory
+   - Any custom paths specified in configuration
+
+<Tip>
+You can configure custom environment directories in your `.condarc` file:
+
+```yaml
+envs_dirs:
+  - /custom/path/to/envs
+  - ~/my-envs
+```
+</Tip>
+
+## Understanding the Output
+
+| Column | Description |
+|--------|-------------|
+| Name | Environment name (or path if created with `-p`) |
+| Active Marker (*) | Indicates the currently activated environment |
+| Path | Full filesystem path to the environment |
+| Size | Disk space used (only with `--size` flag) |
+
+## Related Commands
+
+- [`conda env create`](/commands/env-create) - Create a new environment
+- [`conda env remove`](/commands/env-remove) - Remove an environment
+- [`conda activate`](/commands/activate) - Activate an environment
+- [`conda info`](/commands/info) - Display comprehensive conda information
+- [`conda config --show envs_dirs`](/commands/config) - Show configured environment directories

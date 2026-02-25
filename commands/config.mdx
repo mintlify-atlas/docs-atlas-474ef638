@@ -1,0 +1,193 @@
+---
+title: conda config
+description: Modify configuration values in .condarc files
+---
+
+The `conda config` command allows you to modify configuration values in conda's configuration files (e.g., `~/.condarc`). This command is modeled after the git config command and writes to the user .condarc file by default.
+
+## Syntax
+
+```bash
+conda config [options]
+```
+
+## Config File Location Selection
+
+By default, `conda config` writes to the user config file. You can specify a different location:
+
+### `--system`
+Write to the system .condarc file.
+
+### `--env`
+Write to the active conda environment .condarc file. If no environment is active, writes to the user config file.
+
+### `--file FILE`
+Write to the specified file.
+
+### `-p, --prefix PREFIX`
+Write to the .condarc file in the specified environment prefix.
+
+### `-n, --name NAME`
+Write to the .condarc file in the named environment.
+
+## Config Subcommands
+
+### `--show [KEY ...]`
+Display configuration values as calculated and compiled. If no arguments are given, shows information for all configuration values.
+
+```bash
+# Show all configuration
+conda config --show
+
+# Show specific configuration keys
+conda config --show channels
+conda config --show channel_priority
+```
+
+### `--show-sources`
+Display all identified configuration sources and their values.
+
+```bash
+conda config --show-sources
+```
+
+### `--validate`
+Validate all configuration sources. Iterates over all .condarc files and checks for parsing errors.
+
+```bash
+conda config --validate
+```
+
+### `--describe [KEY ...]`
+Describe given configuration parameters. If no arguments are given, shows information for all configuration parameters.
+
+```bash
+# Describe all configuration options
+conda config --describe
+
+# Describe specific configuration option
+conda config --describe channel_priority
+```
+
+### `--write-default`
+Write the default configuration to a file. Equivalent to `conda config --describe > ~/.condarc`.
+
+```bash
+conda config --write-default
+```
+
+## Config Modifiers
+
+### `--get [KEY ...]`
+Get a configuration value.
+
+```bash
+conda config --get channels
+```
+
+### `--append KEY VALUE`
+Add one configuration value to the end of a list key.
+
+```bash
+conda config --append channels conda-forge
+```
+
+### `--prepend KEY VALUE` / `--add KEY VALUE`
+Add one configuration value to the beginning of a list key.
+
+```bash
+conda config --add channels conda-canary
+```
+
+### `--set KEY VALUE`
+Set a boolean or string key.
+
+```bash
+# Set verbosity to highest level
+conda config --set verbosity 3
+
+# Set channel priority
+conda config --set channel_priority strict
+```
+
+### `--remove KEY VALUE`
+Remove a configuration value from a list key. This removes all instances of the value.
+
+```bash
+conda config --remove channels conda-forge
+```
+
+### `--remove-key KEY`
+Remove a configuration key (and all its values).
+
+```bash
+conda config --remove-key channels
+```
+
+### `--stdin`
+Apply configuration information given in YAML format piped through stdin.
+
+```bash
+echo "channels:\n  - defaults" | conda config --stdin
+```
+
+## Options
+
+### `--json`
+Report all output as JSON. Suitable for programmatic use.
+
+## Common Use Cases
+
+### Display all configuration
+
+View your current conda configuration:
+
+```bash
+conda config --show
+```
+
+### Add a channel
+
+Add the conda-forge channel as a backup to defaults:
+
+```bash
+conda config --append channels conda-forge
+```
+
+<Note>
+The `--add` and `--prepend` flags add channels to the beginning of the list (highest priority), while `--append` adds them to the end (lowest priority).
+</Note>
+
+### Set verbosity for current environment
+
+Set the output verbosity to level 3 (highest) for the current active environment:
+
+```bash
+conda config --set verbosity 3 --env
+```
+
+### View configuration sources
+
+See where your configuration values are coming from:
+
+```bash
+conda config --show-sources
+```
+
+### Get help on configuration options
+
+Print descriptions of all available configuration options:
+
+```bash
+conda config --describe
+```
+
+Or get help on a specific option:
+
+```bash
+conda config --describe channel_priority
+```
+
+<Warning>
+Changes made with `conda config` take effect immediately but may not apply to already-running conda processes.
+</Warning>

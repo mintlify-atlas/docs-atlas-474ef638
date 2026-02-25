@@ -1,0 +1,65 @@
+---
+title: Introduction
+description: Conda is a cross-platform, language-agnostic binary package and environment manager
+---
+
+Conda is a cross-platform, language-agnostic binary package manager. It is a package manager used in conda distributions like [Miniforge](https://github.com/conda-forge/miniforge) and the [Anaconda Distribution](https://www.anaconda.com/distribution/), but it may be used for other systems as well.
+
+## What is Conda?
+
+Conda makes environments first-class citizens, making it easy to create independent environments even for C libraries. The conda command line interface is written entirely in Python, and is BSD licensed open source.
+
+Conda is enhanced by organizations, tools, and repositories created and managed by the amazing members of the [conda community](https://conda.org/).
+
+## Quick Links
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install Conda via Miniconda, Miniforge, or Anaconda Distribution
+  </Card>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Learn the basics and create your first environment
+  </Card>
+  <Card title="User Guide" icon="book" href="/user-guide/concepts">
+    Comprehensive guide to using Conda effectively
+  </Card>
+  <Card title="Command Reference" icon="terminal" href="/commands/overview">
+    Complete reference of all Conda commands
+  </Card>
+</CardGroup>
+
+## Key Features
+
+### Cross-Platform Package Management
+
+Conda works seamlessly across Windows, macOS, and Linux, providing a consistent package management experience regardless of your operating system.
+
+### Environment Management
+
+The real power of conda comes from its ability to manage environments. In conda, an environment can be thought of as a completely separate installation. Conda installs packages into environments efficiently using [hard links](https://en.wikipedia.org/wiki/Hard_link) by default when it is possible, so environments are space efficient, and take seconds to create.
+
+### Language-Agnostic
+
+While conda is written in Python, it can manage packages and dependencies for any language, including Python, R, Ruby, Lua, Scala, Java, JavaScript, C, C++, and more.
+
+### Efficient Storage
+
+Conda uses hard links to create space-efficient environments that can be created in seconds without duplicating files.
+
+### Community-Driven
+
+Conda is supported by a vibrant community that maintains channels like [conda-forge](https://conda-forge.org/) and [Bioconda](https://bioconda.org/), providing access to thousands of packages.
+
+## Getting Help
+
+If you need assistance with Conda, here are some resources:
+
+- [Official Documentation](https://docs.conda.io/projects/conda/en/latest)
+- [Zulip Chat](https://conda.zulipchat.com/)
+- [Bluesky](https://bsky.app/profile/conda.org)
+- [Bug Reports/Feature Requests](https://github.com/conda/conda/issues)
+- [Installer/Package Issues](https://github.com/ContinuumIO/anaconda-issues/issues)
+
+## Open Source
+
+Conda is BSD licensed open source software. Contributions are welcome! See the [contributing documentation](https://github.com/conda/conda/blob/main/CONTRIBUTING.md) for instructions on setting up a development environment.

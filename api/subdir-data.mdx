@@ -1,0 +1,223 @@
+---
+title: SubdirData
+description: High-level management and querying of repodata.json for subdirectories
+---
+
+<Warning>
+**Beta** - While in beta, expect both major and minor changes across minor releases.
+</Warning>
+
+## Overview
+
+The `SubdirData` class provides high-level access to repodata.json files for conda channel subdirectories. It allows you to query available packages from specific channels and subdirectories.
+
+## Constructor
+
+```python
+from conda.api import SubdirData
+from conda.models.channel import Channel
+
+subdir = SubdirData(channel="conda-forge/linux-64")
+```
+
+<ParamField path="channel" type="str or Channel" required>
+  The target subdir for the instance. Must either be a URL that includes a subdir or a Channel object that includes a subdir.
+  
+  Examples:
+  - `'https://repo.anaconda.com/pkgs/main/linux-64'`
+  - `Channel('https://repo.anaconda.com/pkgs/main/linux-64')`
+  - `Channel('conda-forge/osx-64')`
+  - `'conda-forge/linux-64'`
+</ParamField>
+
+<Note>
+The channel parameter must include a subdir (platform). If you provide a channel without a subdir, a `ValueError` will be raised.
+</Note>
+
+## Methods
+
+### query
+
+```python
+results = subdir.query("numpy>=1.20")
+```
+
+Run a query against this specific instance of repodata.
+
+<ParamField path="package_ref_or_match_spec" type="PackageRef or MatchSpec or str" required>
+  Either an exact PackageRef to match against, or a MatchSpec query object. A string will be turned into a MatchSpec automatically.
+</ParamField>
+
+<ResponseField name="return" type="tuple[PackageRecord]">
+  A tuple of PackageRecord objects matching the query.
+</ResponseField>
+
+#### Example
+
+```python
+from conda.api import SubdirData
+
+subdir = SubdirData("conda-forge/linux-64")
+
+# Query for numpy packages
+results = subdir.query("numpy>=1.20,<2.0")
+
+for record in results:
+    print(f"{record.name} {record.version} {record.build}")
+```
+
+### query_all
+
+```python
+results = SubdirData.query_all(
+    "pandas",
+    channels=["conda-forge", "defaults"],
+    subdirs=["linux-64", "noarch"]
+)
+```
+
+Run a query against all repodata instances in the channel/subdir matrix.
+
+<Note>
+This is a static method, so call it on the class itself: `SubdirData.query_all()`
+</Note>
+
+<ParamField path="package_ref_or_match_spec" type="PackageRef or MatchSpec or str" required>
+  Either an exact PackageRef to match against, or a MatchSpec query object. A string will be turned into a MatchSpec automatically.
+</ParamField>
+
+<ParamField path="channels" type="Iterable[Channel or str] or None" default="None">
+  An iterable of URLs for channels or Channel objects. If None, will fall back to `context.channels`.
+</ParamField>
+
+<ParamField path="subdirs" type="Iterable[str] or None" default="None">
+  An iterable of subdirs to search (e.g., `["linux-64", "noarch"]`). If None, will fall back to `context.subdirs`.
+</ParamField>
+
+<ResponseField name="return" type="tuple[PackageRecord]">
+  A tuple of PackageRecord objects matching the query across all specified channels and subdirs.
+</ResponseField>
+
+#### Example
+
+```python
+from conda.api import SubdirData
+
+# Query across all default channels and subdirs
+results = SubdirData.query_all("scipy>=1.7")
+
+# Query specific channels and platforms
+results = SubdirData.query_all(
+    "tensorflow>=2.0",
+    channels=["conda-forge"],
+    subdirs=["linux-64", "osx-64", "noarch"]
+)
+
+for record in results:
+    print(f"{record.name} {record.version} from {record.channel.name}/{record.subdir}")
+```
+
+### iter_records
+
+```python
+for record in subdir.iter_records():
+    print(record.name)
+```
+
+Iterates over all records contained in the repodata.json instance.
+
+<ResponseField name="return" type="Iterable[PackageRecord]">
+  A generator over all PackageRecord objects in the repodata.
+</ResponseField>
+
+<Warning>
+This is a generator that is exhausted on first use. If you need to iterate multiple times, store the results in a list.
+</Warning>
+
+#### Example
+
+```python
+from conda.api import SubdirData
+
+subdir = SubdirData("conda-forge/linux-64")
+
+# Iterate through all available packages
+package_names = set()
+for record in subdir.iter_records():
+    package_names.add(record.name)
+
+print(f"Found {len(package_names)} unique packages")
+```
+
+### reload
+
+```python
+subdir = subdir.reload()
+```
+
+Update the instance with new information. Backing information (i.e., repodata.json) is lazily downloaded/loaded on first use by the other methods of this class.
+
+<Warning>
+You should only use this method if you are **sure** you have outdated data. In most cases, the cached repodata is sufficient and more efficient.
+</Warning>
+
+<ResponseField name="return" type="SubdirData">
+  Returns self for method chaining.
+</ResponseField>
+
+#### Example
+
+```python
+from conda.api import SubdirData
+
+subdir = SubdirData("conda-forge/linux-64")
+
+# Query some data
+results = subdir.query("numpy")
+
+# Force reload if you suspect the data is stale
+subdir = subdir.reload()
+results = subdir.query("numpy")  # Now uses fresh data
+```
+
+## Complete Example
+
+```python
+from conda.api import SubdirData
+from conda.models.match_spec import MatchSpec
+
+# Search for a specific package version across channels
+print("Searching for Python 3.11 packages...")
+results = SubdirData.query_all(
+    MatchSpec("python=3.11"),
+    channels=["conda-forge", "defaults"],
+    subdirs=["linux-64", "osx-64", "win-64"]
+)
+
+print(f"Found {len(results)} matching packages:\n")
+
+# Group by channel and subdir
+by_channel = {}
+for record in results:
+    key = f"{record.channel.name}/{record.subdir}"
+    if key not in by_channel:
+        by_channel[key] = []
+    by_channel[key].append(record)
+
+for channel_subdir, records in sorted(by_channel.items()):
+    print(f"{channel_subdir}:")
+    for record in records[:3]:  # Show first 3
+        print(f"  {record.name} {record.version} (build: {record.build})")
+    if len(records) > 3:
+        print(f"  ... and {len(records) - 3} more")
+    print()
+
+# Query a specific subdir
+print("\nQuerying conda-forge linux-64 for numpy...")
+subdir = SubdirData("conda-forge/linux-64")
+results = subdir.query("numpy>=1.20")
+
+print(f"Found {len(results)} versions:")
+for record in sorted(results, key=lambda r: r.version, reverse=True)[:5]:
+    print(f"  numpy {record.version} (build: {record.build})")
+```

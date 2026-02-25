@@ -1,0 +1,355 @@
+---
+title: conda env create
+description: Create an environment based on an environment definition file
+---
+
+## Overview
+
+The `conda env create` command creates a new conda environment from an environment definition file (typically `environment.yml`). This is the recommended way to create reproducible environments from a specification file.
+
+## Syntax
+
+```bash
+conda env create [options]
+```
+
+<Note>
+By default, `conda env create` looks for a file named `environment.yml` in the current directory. Use `-f` to specify a different file.
+</Note>
+
+## Target Environment Specification
+
+<ParamField path="-n, --name" type="string">
+  Name of environment. Overrides the name specified in the environment.yml file.
+</ParamField>
+
+<ParamField path="-p, --prefix" type="string">
+  Full path to environment location (i.e. prefix). Use this to create the environment at a specific location.
+</ParamField>
+
+## File Options
+
+<ParamField path="-f, --file" type="string" default="environment.yml">
+  Environment definition file. Can be:
+  - `environment.yml` - Conda environment specification
+  - `requirements.txt` - Pip-style requirements file
+  - Any file supported by environment specifier plugins
+  
+  <Tip>
+  You can specify the file path relative to your current directory or use an absolute path.
+  </Tip>
+</ParamField>
+
+## Channel Customization
+
+<ParamField path="-c, --channel" type="string">
+  Additional channel to search for packages. Can be specified multiple times.
+</ParamField>
+
+<ParamField path="--use-local" type="boolean">
+  Use locally built packages. Identical to '-c local'.
+</ParamField>
+
+<ParamField path="-O, --override-channels" type="boolean">
+  Do not search default or .condarc channels. Requires `--channel`.
+</ParamField>
+
+## Environment Specifier Options
+
+<ParamField path="--environment-specifier" type="string">
+  Specify which environment specifier plugin to use for parsing the environment file.
+</ParamField>
+
+## Solver Options
+
+<ParamField path="--solver" type="string">
+  Choose which solver backend to use.
+</ParamField>
+
+## Platform Options
+
+<ParamField path="--platform, --subdir" type="string">
+  Target platform/subdir for the environment (e.g., linux-64, osx-64, win-64).
+</ParamField>
+
+## Package Options
+
+<ParamField path="--no-default-packages" type="boolean">
+  Do not install default packages (specified in .condarc). Only install packages explicitly listed in the environment file.
+</ParamField>
+
+## Output and Prompt Options
+
+<ParamField path="--json" type="boolean">
+  Report all output as JSON. Suitable for using conda programmatically.
+</ParamField>
+
+<ParamField path="-d, --dry-run" type="boolean">
+  Only display what would have been done. Outputs the solved environment specification without actually creating the environment.
+</ParamField>
+
+<ParamField path="-y, --yes" type="boolean">
+  Sets any confirmation values to 'yes' automatically. If the environment already exists at the target location, it will be removed and recreated.
+</ParamField>
+
+<ParamField path="-v, --verbose" type="boolean">
+  Can be used multiple times. Once for INFO, twice for DEBUG, three times for TRACE.
+</ParamField>
+
+<ParamField path="-q, --quiet" type="boolean">
+  Do not display progress bar.
+</ParamField>
+
+## Networking Options
+
+<ParamField path="-C, --use-index-cache" type="boolean">
+  Use cache of channel index files, even if it has expired.
+</ParamField>
+
+<ParamField path="-k, --insecure" type="boolean">
+  Allow conda to perform "insecure" SSL connections and transfers.
+</ParamField>
+
+<ParamField path="--offline" type="boolean">
+  Offline mode. Don't connect to the Internet.
+</ParamField>
+
+## Environment File Format
+
+### YAML Format (environment.yml)
+
+The standard conda environment file uses YAML format:
+
+```yaml
+name: myenv
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - numpy
+  - pandas>=1.5
+  - pip
+  - pip:
+    - requests
+    - flask
+variables:
+  DATABASE_URL: postgresql://localhost/mydb
+  DEBUG: "true"
+```
+
+### Requirements.txt Format
+
+You can also use pip-style requirements.txt:
+
+```txt
+numpy==1.24.0
+pandas>=1.5.0
+requests
+```
+
+## Examples
+
+### Create environment from default file
+
+```bash
+conda env create
+```
+
+Creates an environment from `environment.yml` in the current directory.
+
+### Create with custom environment name
+
+```bash
+conda env create -n myenv
+```
+
+Creates an environment named `myenv`, overriding the name in the file.
+
+### Create from specific file
+
+```bash
+conda env create -f /path/to/environment.yml
+```
+
+Creates an environment from a file at a specific location.
+
+### Create from requirements.txt
+
+```bash
+conda env create -f requirements.txt -n myenv
+```
+
+Creates an environment from a pip requirements file.
+
+### Create at specific location
+
+```bash
+conda env create -f environment.yml -p /home/user/envs/myenv
+```
+
+Creates the environment at the specified path.
+
+### Dry run to preview changes
+
+```bash
+conda env create --dry-run
+```
+
+Shows what would be installed without actually creating the environment.
+
+### Create with additional channel
+
+```bash
+conda env create -f environment.yml -c conda-forge
+```
+
+Adds conda-forge channel in addition to channels specified in the file.
+
+### Create without default packages
+
+```bash
+conda env create -f environment.yml --no-default-packages
+```
+
+Creates environment with only packages specified in the file, ignoring default packages from .condarc.
+
+## Common Use Cases
+
+<AccordionGroup>
+  <Accordion title="Reproducible project environments">
+    Share environment.yml with your team for consistent environments:
+    
+    ```yaml
+    name: data-project
+    channels:
+      - conda-forge
+    dependencies:
+      - python=3.11
+      - pandas=2.0
+      - scikit-learn=1.3
+      - jupyter
+    ```
+    
+    ```bash
+    conda env create -f environment.yml
+    ```
+  </Accordion>
+
+  <Accordion title="Multi-platform environments">
+    Create environments that work across different platforms:
+    
+    ```yaml
+    name: cross-platform
+    channels:
+      - conda-forge
+    dependencies:
+      - python=3.11
+      - numpy
+      - pandas
+    ```
+    
+    The solver will automatically select appropriate packages for your platform.
+  </Accordion>
+
+  <Accordion title="Environments with environment variables">
+    Set environment variables automatically:
+    
+    ```yaml
+    name: web-app
+    dependencies:
+      - python=3.11
+      - flask
+    variables:
+      FLASK_APP: app.py
+      FLASK_ENV: development
+    ```
+  </Accordion>
+
+  <Accordion title="Mixed conda and pip dependencies">
+    Combine conda and pip packages:
+    
+    ```yaml
+    name: mixed-deps
+    dependencies:
+      - python=3.11
+      - numpy
+      - pip
+      - pip:
+        - requests
+        - some-pip-only-package
+    ```
+  </Accordion>
+
+  <Accordion title="Development environments from GitHub">
+    Create environments from files hosted online:
+    
+    ```bash
+    conda env create -f https://raw.githubusercontent.com/user/repo/main/environment.yml
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Behavior Notes
+
+<Warning>
+**Existing Environment Handling**
+
+If an environment with the same name already exists:
+- Without `-y` flag: You'll be prompted to remove and recreate it
+- With `-y` flag: The existing environment will be automatically removed and recreated
+</Warning>
+
+<Info>
+**Name Priority**
+
+When both the file and command line specify a name:
+1. Command line `-n/--name` takes precedence
+2. File's `name:` field is used if no command line name
+3. If neither is specified, you must provide one
+</Info>
+
+<Tip>
+**Platform-Specific Packages**
+
+If the subdir is different from the native platform, conda will write it to the environment's .condarc file for future operations.
+</Tip>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Unable to create environment - no name specified">
+    Ensure either:
+    - Your environment.yml has a `name:` field
+    - You provide `-n` or `-p` flag
+    
+    ```bash
+    conda env create -n myenv -f environment.yml
+    ```
+  </Accordion>
+
+  <Accordion title="File not found">
+    Check that the file exists and the path is correct:
+    
+    ```bash
+    ls -l environment.yml
+    conda env create -f ./environment.yml
+    ```
+  </Accordion>
+
+  <Accordion title="Package conflicts">
+    Use `--dry-run` to see what will be installed:
+    
+    ```bash
+    conda env create --dry-run
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Related Commands
+
+- [`conda env update`](/commands/env-update) - Update an existing environment
+- [`conda env export`](/commands/env-export) - Export environment to a file
+- [`conda create`](/commands/create) - Create environment from command line
+- [`conda env remove`](/commands/env-remove) - Remove an environment
+- [`conda activate`](/commands/activate) - Activate the created environment

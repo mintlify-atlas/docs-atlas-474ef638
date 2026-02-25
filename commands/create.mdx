@@ -1,0 +1,235 @@
+---
+title: conda create
+description: Create a new conda environment from a list of specified packages
+---
+
+## Overview
+
+The `conda create` command creates a new conda environment with the specified packages. This is the primary way to create isolated Python environments for different projects.
+
+## Syntax
+
+```bash
+conda create [options] [package_spec ...]
+```
+
+<Note>
+To use the newly-created environment, use `conda activate envname`. This command requires either the `-n NAME` or `-p PREFIX` option unless `--dry-run` or `--download-only` is specified.
+</Note>
+
+## Target Environment Specification
+
+<ParamField path="-n, --name" type="string">
+  Name of environment.
+</ParamField>
+
+<ParamField path="-p, --prefix" type="string">
+  Full path to environment location (i.e. prefix).
+</ParamField>
+
+## Core Options
+
+<ParamField path="--clone" type="string">
+  Create a new environment as a copy of an existing local environment.
+  
+  <Warning>
+  When using `--clone`, you cannot specify additional packages or use the `--file` argument.
+  </Warning>
+</ParamField>
+
+<ParamField path="--file" type="string">
+  Read package versions from the given file. Repeated file specifications can be passed (e.g. `--file=file1 --file=file2`).
+</ParamField>
+
+<ParamField path="--dev" type="boolean">
+  Use `sys.executable -m conda` in wrapper scripts instead of CONDA_EXE. This is mainly for use during tests where we test new conda sources against old Python versions.
+</ParamField>
+
+## Channel Customization
+
+<ParamField path="-c, --channel" type="string">
+  Additional channel to search for packages. These are URLs searched in the order they are given (including local directories using the 'file://' syntax or simply a path like '/home/conda/mychan' or '../mychan').
+</ParamField>
+
+<ParamField path="--use-local" type="boolean">
+  Use locally built packages. Identical to '-c local'.
+</ParamField>
+
+<ParamField path="-O, --override-channels" type="boolean">
+  Do not search default or .condarc channels. Requires `--channel`.
+</ParamField>
+
+<ParamField path="--repodata-fn" type="string">
+  Specify file name of repodata on the remote server where your channels are configured or within local backups.
+</ParamField>
+
+## Solver Mode Modifiers
+
+<ParamField path="--strict-channel-priority" type="boolean">
+  Packages in lower priority channels are not considered if a package with the same name appears in a higher priority channel.
+</ParamField>
+
+<ParamField path="--no-channel-priority" type="boolean">
+  Package version takes precedence over channel priority. Overrides the value given by `conda config --show channel_priority`.
+</ParamField>
+
+<ParamField path="--no-deps" type="boolean">
+  Do not install, update, remove, or change dependencies. This WILL lead to broken environments and inconsistent behavior. Use at your own risk.
+</ParamField>
+
+<ParamField path="--only-deps" type="boolean">
+  Only install dependencies.
+</ParamField>
+
+<ParamField path="--no-pin" type="boolean">
+  Ignore pinned file.
+</ParamField>
+
+## Solver Backend
+
+<ParamField path="--solver" type="string">
+  Choose which solver backend to use.
+</ParamField>
+
+## Platform Options
+
+<ParamField path="--platform, --subdir" type="string">
+  Target platform/subdir for the environment (e.g., linux-64, osx-64, win-64).
+</ParamField>
+
+## Output and Prompt Options
+
+<ParamField path="--json" type="boolean">
+  Report all output as json. Suitable for using conda programmatically.
+</ParamField>
+
+<ParamField path="-d, --dry-run" type="boolean">
+  Only display what would have been done.
+</ParamField>
+
+<ParamField path="-y, --yes" type="boolean">
+  Sets any confirmation values to 'yes' automatically. Users will not be asked to confirm any adding, deleting, backups, etc.
+</ParamField>
+
+<ParamField path="-v, --verbose" type="boolean">
+  Can be used multiple times. Once for INFO, twice for DEBUG, three times for TRACE.
+</ParamField>
+
+<ParamField path="-q, --quiet" type="boolean">
+  Do not display progress bar.
+</ParamField>
+
+<ParamField path="--download-only" type="boolean">
+  Solve an environment and ensure package caches are populated, but exit prior to unlinking and linking packages into the prefix.
+</ParamField>
+
+## Networking Options
+
+<ParamField path="-C, --use-index-cache" type="boolean">
+  Use cache of channel index files, even if it has expired.
+</ParamField>
+
+<ParamField path="-k, --insecure" type="boolean">
+  Allow conda to perform "insecure" SSL connections and transfers. Equivalent to setting 'ssl_verify' to 'false'.
+</ParamField>
+
+<ParamField path="--offline" type="boolean">
+  Offline mode. Don't connect to the Internet.
+</ParamField>
+
+## Examples
+
+### Create an environment with a specific package
+
+```bash
+conda create -n myenv sqlite
+```
+
+Creates a new environment called `myenv` with the `sqlite` package installed.
+
+### Create an environment with multiple packages
+
+```bash
+conda create -n datascience python=3.11 numpy pandas matplotlib
+```
+
+Creates an environment with Python 3.11 and several data science packages.
+
+### Create an environment from a file
+
+```bash
+conda create -n myenv --file requirements.txt
+```
+
+Creates an environment based on packages listed in `requirements.txt`.
+
+### Clone an existing environment
+
+```bash
+conda create -n env2 --clone /path/to/env1
+```
+
+Creates a new environment `env2` as a copy of an existing environment `env1`.
+
+### Create an environment at a specific location
+
+```bash
+conda create -p /home/user/myenv python=3.11
+```
+
+Creates an environment at the specified path instead of in the default envs directory.
+
+### Create with specific channel
+
+```bash
+conda create -n myenv -c conda-forge python=3.11 scikit-learn
+```
+
+Creates an environment using packages from the conda-forge channel.
+
+## Common Use Cases
+
+<AccordionGroup>
+  <Accordion title="Creating isolated project environments">
+    Use `conda create` to isolate dependencies for different projects:
+    
+    ```bash
+    conda create -n project1 python=3.11 flask
+    conda create -n project2 python=3.9 django
+    ```
+    
+    Each project has its own Python version and dependencies.
+  </Accordion>
+
+  <Accordion title="Testing with different Python versions">
+    Create environments with different Python versions for testing:
+    
+    ```bash
+    conda create -n py39-test python=3.9 pytest
+    conda create -n py311-test python=3.11 pytest
+    ```
+  </Accordion>
+
+  <Accordion title="Reproducible environments from YAML files">
+    Use environment.yml files for reproducibility:
+    
+    ```bash
+    conda create -n myenv --file environment.yml
+    ```
+  </Accordion>
+
+  <Accordion title="Cloning environments for backups">
+    Clone an environment before making major changes:
+    
+    ```bash
+    conda create -n myenv-backup --clone myenv
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Related Commands
+
+- [`conda activate`](/commands/activate) - Activate an environment
+- [`conda env create`](/commands/env-create) - Create environment from environment.yml file
+- [`conda install`](/commands/install) - Install packages into existing environment
+- [`conda remove`](/commands/remove) - Remove an environment

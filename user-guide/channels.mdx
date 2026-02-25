@@ -1,0 +1,733 @@
+---
+title: Channel Management
+description: Configure and manage conda package channels
+---
+
+## What are Channels?
+
+A **channel** is a URL location where conda looks for packages. Channels contain package files and associated metadata that tell conda how to install packages.
+
+<Info>
+Think of channels as package repositories. Different channels can contain different versions of packages or entirely different packages.
+</Info>
+
+## Channel Architecture
+
+Channels in conda follow a specific structure:
+
+<CodeGroup>
+```python Channel Components
+# Channel structure:
+# scheme <> auth <> location <> token <> channel <> subchannel <> platform <> package_filename
+
+class Channel:
+    scheme: str           # https, http, file
+    auth: str            # Authentication credentials  
+    location: str        # Base URL/path
+    token: str           # Access token
+    name: str            # Channel name
+    platform: str        # Subdirectory (linux-64, osx-64, etc)
+    package_filename: str # Specific package file
+```
+</CodeGroup>
+
+## Default Channels
+
+Conda uses different default channels based on your operating system:
+
+<Tabs>
+  <Tab title="Unix/Linux/macOS">
+    ```python
+    DEFAULT_CHANNELS_UNIX = (
+        "https://repo.anaconda.com/pkgs/main",
+        "https://repo.anaconda.com/pkgs/r",
+    )
+    ```
+  </Tab>
+  <Tab title="Windows">
+    ```python
+    DEFAULT_CHANNELS_WIN = (
+        "https://repo.anaconda.com/pkgs/main",
+        "https://repo.anaconda.com/pkgs/r",
+        "https://repo.anaconda.com/pkgs/msys2",
+    )
+    ```
+  </Tab>
+</Tabs>
+
+<CodeGroup>
+```python Channel Constants
+DEFAULTS_CHANNEL_NAME = "defaults"
+DEFAULT_CHANNEL_ALIAS = "https://conda.anaconda.org"
+UNKNOWN_CHANNEL = "<unknown>"
+```
+</CodeGroup>
+
+<Note>
+The "defaults" channel is a special name that expands to the platform-specific default channels above.
+</Note>
+
+## Custom Channels
+
+You can use custom channels for packages from other sources:
+
+<CodeGroup>
+```python Default Custom Channels
+DEFAULT_CUSTOM_CHANNELS = {
+    "pkgs/pro": "https://repo.anaconda.com",
+}
+```
+</CodeGroup>
+
+### Popular Community Channels
+
+<CardGroup cols={2}>
+  <Card title="conda-forge" icon="hammer">
+    Community-led collection of packages
+    ```bash
+    conda install -c conda-forge package_name
+    ```
+  </Card>
+  <Card title="bioconda" icon="dna">
+    Bioinformatics packages
+    ```bash
+    conda install -c bioconda package_name
+    ```
+  </Card>
+  <Card title="pytorch" icon="brain">
+    PyTorch and related packages
+    ```bash
+    conda install -c pytorch pytorch
+    ```
+  </Card>
+  <Card title="nvidia" icon="microchip">
+    NVIDIA GPU packages
+    ```bash
+    conda install -c nvidia cuda-toolkit
+    ```
+  </Card>
+</CardGroup>
+
+## Adding and Removing Channels
+
+### Add Channels
+
+<CodeGroup>
+```bash Add to Channel List
+# Add channel to end of list (lowest priority)
+conda config --add channels conda-forge
+
+# Add to beginning of list (highest priority)
+conda config --prepend channels conda-forge
+
+# Add with specific priority
+conda config --append channels conda-forge
+```
+
+```bash View Current Channels
+# Show all channels
+conda config --show channels
+
+# Show channel URLs
+conda config --show channel_alias
+```
+</CodeGroup>
+
+### Remove Channels
+
+```bash
+# Remove specific channel
+conda config --remove channels conda-forge
+
+# Remove all custom channels (reset to defaults)
+conda config --remove-key channels
+```
+
+### Temporary Channel Override
+
+Use channels for a single command without modifying config:
+
+```bash
+# Install from specific channel
+conda install -c conda-forge numpy
+
+# Use multiple channels (order matters)
+conda install -c pytorch -c conda-forge package_name
+
+# Override all configured channels
+conda install --override-channels -c conda-forge numpy
+```
+
+<Tip>
+Using `-c` for one-off installations is often better than permanently adding channels.
+</Tip>
+
+## Channel Priority
+
+Channel priority determines which version of a package to install when multiple channels have it.
+
+### Priority Modes
+
+<CodeGroup>
+```python Channel Priority Enum
+class ChannelPriority(ValueEnum):
+    STRICT = "strict"        # Install only from highest-priority channel
+    FLEXIBLE = "flexible"    # Consider all channels, prefer higher priority
+    DISABLED = "disabled"    # Ignore channel priority
+```
+</CodeGroup>
+
+### Strict Priority (Recommended)
+
+```bash
+# Enable strict channel priority
+conda config --set channel_priority strict
+```
+
+<Info>
+**Strict mode** ensures packages come from the highest-priority channel that has them, regardless of version. This prevents mixing packages from multiple channels and reduces conflicts.
+</Info>
+
+**Behavior:**
+- If channel 1 has package A version 1.0 and channel 2 has version 2.0
+- Strict mode installs version 1.0 from channel 1
+- More predictable and stable
+
+### Flexible Priority
+
+```bash
+# Enable flexible channel priority
+conda config --set channel_priority flexible
+```
+
+**Behavior:**
+- Considers package versions across all channels
+- Prefers higher-priority channels when versions are equal
+- May mix packages from different channels
+
+### Disabled Priority
+
+```bash
+# Disable channel priority
+conda config --set channel_priority disabled
+```
+
+**Behavior:**
+- Only considers package version and build number
+- Channel order doesn't matter
+- Can lead to inconsistent environments
+
+<Warning>
+Disabling channel priority is not recommended for production environments as it can lead to difficult-to-reproduce issues.
+</Warning>
+
+## Channel URLs and Formats
+
+### URL Schemes
+
+Conda supports multiple URL schemes:
+
+<CodeGroup>
+```python Recognized Schemes
+RECOGNIZED_URL_SCHEMES = (
+    "http",
+    "https",
+    "ftp",
+    "s3",
+    "file",
+)
+```
+</CodeGroup>
+
+### Channel URL Examples
+
+<CodeGroup>
+```bash HTTPS Channel
+# Standard HTTPS URL
+https://conda.anaconda.org/conda-forge
+```
+
+```bash Local Directory
+# Local file path
+file:///home/user/my-channel
+
+# Relative path (must start with ./)
+./local-packages
+```
+
+```bash With Authentication
+# Token-based authentication
+https://conda.anaconda.org/t/TOKEN/private-channel
+
+# Username/password authentication  
+https://username:password@example.com/channel
+```
+
+```bash S3 Bucket
+# AWS S3 channel
+s3://my-bucket/conda-channel
+```
+</CodeGroup>
+
+### Platform Subdirectories
+
+Channels contain subdirectories for each platform:
+
+<CodeGroup>
+```python Platform Subdirectories
+KNOWN_SUBDIRS = (
+    "noarch",              # Platform-independent
+    "emscripten-wasm32",
+    "wasi-wasm32",
+    "freebsd-64",
+    "linux-32",
+    "linux-64",
+    "linux-aarch64",
+    "linux-armv6l",
+    "linux-armv7l",
+    "linux-ppc64",
+    "linux-ppc64le",
+    "linux-riscv64",
+    "linux-s390x",
+    "osx-64",
+    "osx-arm64",
+    "win-32",
+    "win-64",
+    "win-arm64",
+    "zos-z",
+)
+```
+</CodeGroup>
+
+<Info>
+The `noarch` subdirectory contains platform-independent packages (pure Python, documentation, etc.).
+</Info>
+
+## Working with Channels
+
+### Channel Objects
+
+Create and manipulate channel objects programmatically:
+
+<CodeGroup>
+```python From URL
+from conda.models.channel import Channel
+
+# Create from URL
+channel = Channel.from_url("https://conda.anaconda.org/conda-forge")
+
+# Access properties
+print(channel.name)          # "conda-forge"
+print(channel.scheme)        # "https"
+print(channel.location)      # "conda.anaconda.org"
+print(channel.canonical_name) # "conda-forge"
+```
+
+```python From Channel Name
+# Create from name
+channel = Channel.from_channel_name("conda-forge")
+
+# Create from value (flexible)
+channel = Channel.from_value("conda-forge")
+channel = Channel.from_value("https://conda.anaconda.org/conda-forge")
+channel = Channel.from_value("/path/to/local/channel")
+```
+
+```python Generate URLs
+# Get channel URLs for platforms
+urls = channel.urls()
+# Returns URLs for all configured subdirs:
+# ['https://conda.anaconda.org/conda-forge/linux-64',
+#  'https://conda.anaconda.org/conda-forge/noarch']
+
+# Get URLs for specific subdirs
+urls = channel.urls(subdirs=["osx-64", "noarch"])
+
+# Get URLs with credentials
+urls = channel.urls(with_credentials=True)
+```
+</CodeGroup>
+
+### MultiChannel
+
+Some channel names expand to multiple channels:
+
+<CodeGroup>
+```python MultiChannel Example
+from conda.models.channel import MultiChannel
+
+# "defaults" expands to multiple channels
+defaults = Channel.from_value("defaults")
+print(defaults.channels)
+# Returns tuple of Channel objects for:
+# - https://repo.anaconda.com/pkgs/main
+# - https://repo.anaconda.com/pkgs/r
+# - https://repo.anaconda.com/pkgs/msys2 (Windows only)
+```
+</CodeGroup>
+
+## Channel Configuration
+
+### Per-Environment Channels
+
+Specify channels in environment files:
+
+<CodeGroup>
+```yaml environment.yml
+name: myproject
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - numpy
+  - pandas
+```
+</CodeGroup>
+
+### Global Channel Configuration
+
+Edit `~/.condarc` to set default channels:
+
+<CodeGroup>
+```yaml ~/.condarc
+channels:
+  - conda-forge
+  - defaults
+
+channel_priority: strict
+
+channel_alias: https://conda.anaconda.org
+
+default_channels:
+  - https://repo.anaconda.com/pkgs/main
+  - https://repo.anaconda.com/pkgs/r
+```
+</CodeGroup>
+
+### Channel-Specific Settings
+
+<CodeGroup>
+```yaml Advanced Channel Config
+channels:
+  - conda-forge
+  - defaults
+
+custom_channels:
+  my-channel: https://example.com/conda
+
+custom_multichannels:
+  my-stack:
+    - https://example.com/channel1
+    - https://example.com/channel2
+
+migrated_channel_aliases:
+  - https://old-server.com/conda
+```
+</CodeGroup>
+
+## Channel Priority in Practice
+
+### Prioritize Channels
+
+Channel priority is determined by order in configuration:
+
+```bash
+# View current order (first = highest priority)
+conda config --show channels
+
+# Add to top (highest priority)
+conda config --prepend channels conda-forge
+
+# Result:
+channels:
+  - conda-forge    # Priority 1 (highest)
+  - defaults       # Priority 2
+```
+
+### Priority Values
+
+<CodeGroup>
+```python Maximum Priority
+MAX_CHANNEL_PRIORITY = 10000
+# Reserved for packages that need highest priority
+```
+</CodeGroup>
+
+### Example Priority Mapping
+
+<CodeGroup>
+```python Prioritize Channels Function
+from conda.models.channel import prioritize_channels
+
+# Create priority mapping
+channels = ["conda-forge", "defaults"]
+priorities = prioritize_channels(channels)
+
+# Returns:
+# {
+#   'https://conda.anaconda.org/conda-forge/linux-64': ('conda-forge', 0),
+#   'https://conda.anaconda.org/conda-forge/noarch': ('conda-forge', 0),
+#   'https://repo.anaconda.com/pkgs/main/linux-64': ('defaults', 1),
+#   'https://repo.anaconda.com/pkgs/main/noarch': ('defaults', 1),
+#   'https://repo.anaconda.com/pkgs/r/linux-64': ('defaults', 2),
+#   'https://repo.anaconda.com/pkgs/r/noarch': ('defaults', 2),
+# }
+```
+</CodeGroup>
+
+<Info>
+Lower priority numbers mean higher priority. Priority 0 is the highest.
+</Info>
+
+## Repodata
+
+Each channel provides metadata about available packages:
+
+<CodeGroup>
+```python Repodata File
+REPODATA_FN = "repodata.json"
+```
+</CodeGroup>
+
+Conda downloads `repodata.json` from each channel to determine available packages:
+
+```
+https://conda.anaconda.org/conda-forge/linux-64/repodata.json
+https://conda.anaconda.org/conda-forge/noarch/repodata.json
+```
+
+### Repodata Contents
+
+The `repodata.json` file contains:
+- List of all packages in the channel/subdir
+- Package metadata (version, dependencies, build info)
+- Checksums for verification
+
+## Local Channels
+
+### Create a Local Channel
+
+```bash
+# Create channel directory structure
+mkdir -p ~/my-channel/linux-64
+mkdir -p ~/my-channel/noarch
+
+# Copy packages
+cp my-package-1.0-py311.tar.bz2 ~/my-channel/linux-64/
+
+# Index the channel
+conda index ~/my-channel
+```
+
+### Use Local Channel
+
+```bash
+# Install from local channel
+conda install -c file:///home/user/my-channel my-package
+
+# Or use relative path
+conda install -c ./my-channel my-package
+
+# Add to channel list
+conda config --add channels file:///home/user/my-channel
+```
+
+<Tip>
+Local channels are useful for offline installations or distributing internal packages.
+</Tip>
+
+## Mirrors and Proxies
+
+### Mirror Configuration
+
+Use channel mirrors for faster access:
+
+```yaml ~/.condarc
+channels:
+  - https://mirror.example.com/conda-forge
+  - defaults
+
+# Map old URLs to new mirrors
+migrated_channel_aliases:
+  - https://conda.anaconda.org
+
+migrated_custom_channels:
+  conda-forge: https://mirror.example.com/conda-forge
+```
+
+### Proxy Settings
+
+```bash
+# Set proxy for conda
+conda config --set proxy_servers.http http://proxy.example.com:8080
+conda config --set proxy_servers.https https://proxy.example.com:8080
+
+# Or use environment variables
+export HTTP_PROXY=http://proxy.example.com:8080
+export HTTPS_PROXY=https://proxy.example.com:8080
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Strict Channel Priority">
+    Enable strict priority to ensure reproducible environments:
+    ```bash
+    conda config --set channel_priority strict
+    ```
+    This prevents mixing packages from different channels.
+  </Accordion>
+  
+  <Accordion title="Minimize Number of Channels">
+    Use only necessary channels to reduce solve time:
+    ```bash
+    # Good: focused channel list
+    channels:
+      - conda-forge
+      - defaults
+    
+    # Avoid: too many channels
+    channels:
+      - conda-forge
+      - bioconda
+      - pytorch
+      - nvidia
+      - defaults
+    ```
+  </Accordion>
+  
+  <Accordion title="Document Channel Dependencies">
+    Include channels in environment files:
+    ```yaml
+    name: myproject
+    channels:
+      - conda-forge
+      - defaults
+    dependencies:
+      - python=3.11
+    ```
+  </Accordion>
+  
+  <Accordion title="Use Channel Specifications in Requirements">
+    Pin packages to specific channels when needed:
+    ```bash
+    # In environment.yml
+    dependencies:
+      - conda-forge::numpy
+      - defaults::python
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Package Not Found in Any Channel">
+    Check if the package exists and which channel has it:
+    ```bash
+    # Search all configured channels
+    conda search package_name
+    
+    # Search specific channel
+    conda search -c conda-forge package_name
+    
+    # Search with wildcards
+    conda search "*package*"
+    ```
+  </Accordion>
+  
+  <Accordion title="Channel Connection Errors">
+    Verify channel URLs are accessible:
+    ```bash
+    # Test channel connectivity
+    conda config --show channels
+    
+    # Try accessing channel URL
+    curl -I https://conda.anaconda.org/conda-forge/linux-64/repodata.json
+    
+    # Check for proxy issues
+    conda config --show proxy_servers
+    ```
+  </Accordion>
+  
+  <Accordion title="Slow Package Solving">
+    Reduce the number of channels:
+    ```bash
+    # Temporarily override channels
+    conda install --override-channels -c conda-forge package_name
+    
+    # Or reduce permanent channel list
+    conda config --show channels
+    conda config --remove channels unnecessary-channel
+    ```
+  </Accordion>
+  
+  <Accordion title="Mixed Packages from Different Channels">
+    Enable strict channel priority:
+    ```bash
+    conda config --set channel_priority strict
+    
+    # Rebuild environment cleanly
+    conda create -n clean_env --file environment.yml
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Advanced Topics
+
+### Channel Tokens
+
+For private channels requiring authentication:
+
+```bash
+# Set token in URL
+conda install -c https://conda.anaconda.org/t/YOUR-TOKEN/private-channel package
+
+# Or configure token globally
+conda config --set channel_alias https://conda.anaconda.org/t/YOUR-TOKEN
+```
+
+<Warning>
+Never commit tokens to version control. Use environment variables or secure credential storage.
+</Warning>
+
+### Notices from Channels
+
+Channels can provide notices about updates or issues:
+
+<CodeGroup>
+```python Notices Configuration
+NOTICES_FN = "notices.json"
+NOTICES_CACHE_FN = "notices.cache"
+NOTICES_CACHE_SUBDIR = "notices"
+NOTICES_DECORATOR_DISPLAY_INTERVAL = 86400  # 24 hours in seconds
+```
+</CodeGroup>
+
+### Offline Mode
+
+Work with cached packages when offline:
+
+```bash
+# Enable offline mode
+conda config --set offline True
+
+# Or use flag
+conda install --offline package_name
+```
+
+<Info>
+In offline mode, conda only uses cached packages and does not access channels.
+</Info>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Package Management" icon="box" href="/user-guide/packages">
+    Learn how to install packages from channels
+  </Card>
+  <Card title="Environment Management" icon="layer-group" href="/user-guide/environments">
+    Create and manage conda environments
+  </Card>
+</CardGroup>

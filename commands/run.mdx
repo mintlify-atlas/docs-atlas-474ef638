@@ -1,0 +1,164 @@
+---
+title: conda run
+description: Run an executable in a conda environment
+---
+
+The `conda run` command allows you to run executables within a specified conda environment without manually activating it first.
+
+## Syntax
+
+```bash
+conda run [options] [--] EXECUTABLE [ARGS ...]
+```
+
+## Arguments
+
+### `EXECUTABLE [ARGS ...]`
+Executable name with additional arguments to be passed to the executable on invocation.
+
+Use `--` to separate conda options from the executable's options:
+
+```bash
+conda run -n myenv -- python -v
+conda run -v -n myenv -- tar -tvf file.tar
+```
+
+## Options
+
+### `-n, --name NAME`
+Name of the environment to run the command in.
+
+```bash
+conda run -n myenv python script.py
+```
+
+### `-p, --prefix PREFIX`
+Full path to the environment prefix to run the command in.
+
+```bash
+conda run -p /path/to/env python script.py
+```
+
+### `--cwd DIRECTORY`
+Current working directory for the command to run in. Defaults to the user's current working directory if not specified.
+
+```bash
+conda run -n myenv --cwd /tmp python script.py
+```
+
+### `-v, --verbose`
+Use once for detailed output, twice for even more detailed output.
+
+```bash
+conda run -v -n myenv python script.py
+```
+
+### `-s, --no-capture-output` / `--live-stream`
+Don't capture stdout/stderr (standard out/standard error). By default, conda run captures output and displays it after the command completes. This flag streams output in real-time.
+
+```bash
+conda run -n myenv --live-stream python script.py
+```
+
+### `--debug-wrapper-scripts`
+When set, where implemented, the shell wrapper scripts will use the echo command to print debugging information to stderr (standard error).
+
+```bash
+conda run --debug-wrapper-scripts -n myenv python script.py
+```
+
+### `--dev`
+(Deprecated in 26.9, will be removed in 27.3)
+
+Sets `CONDA_EXE` to `python -m conda`, assuming the current working directory contains the root of conda development sources. This is mainly for use during tests where we test new conda sources against old Python versions.
+
+<Warning>
+This option is deprecated. Set `PYTHONPATH` to the conda source root instead.
+</Warning>
+
+## Common Use Cases
+
+### Run a Python script in a specific environment
+
+```bash
+# Create an environment
+conda create -y -n my-python-env python=3.11
+
+# Run a script without activating
+conda run -n my-python-env python script.py
+```
+
+### Check Python version in an environment
+
+```bash
+conda run -n my-python-env python --version
+```
+
+### Run command with arguments that start with dashes
+
+Use `--` to separate conda options from the executable's options:
+
+```bash
+conda run -n myenv -- python -v script.py
+```
+
+### Run command in specific directory
+
+```bash
+conda run -n myenv --cwd /path/to/project python test.py
+```
+
+### Stream output in real-time
+
+By default, conda run captures and displays output after completion. For long-running processes:
+
+```bash
+conda run -n myenv --live-stream python long_running_script.py
+```
+
+### Run command with environment prefix
+
+If you prefer to specify the full path:
+
+```bash
+conda run -p ~/envs/myenv python script.py
+```
+
+## How It Works
+
+When you run `conda run`:
+
+1. Conda creates a temporary shell wrapper script
+2. The script sets up the environment (similar to activation)
+3. The command is executed within that environment
+4. Output is captured (unless `--no-capture-output` is used)
+5. The wrapper script is cleaned up after execution
+6. The exit code of the command is returned
+
+<Note>
+`conda run` is useful for:
+- Running commands in environments without manual activation
+- Scripting and automation
+- CI/CD pipelines
+- Running one-off commands in different environments
+</Note>
+
+## Exit Codes
+
+The exit code of `conda run` matches the exit code of the executed command. If the command fails, conda run will also fail with the same exit code.
+
+## Example: Complete Workflow
+
+```bash
+# Create an environment with specific packages
+conda create -y -n data-analysis python=3.11 pandas numpy
+
+# Run a data processing script
+conda run -n data-analysis python process_data.py
+
+# Run with verbose output
+conda run -v -n data-analysis python process_data.py
+
+# Run and stream output in real-time
+conda run -n data-analysis --live-stream python long_process.py
+```

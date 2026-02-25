@@ -1,0 +1,347 @@
+---
+title: conda env update
+description: Update the current environment based on environment file
+---
+
+## Overview
+
+The `conda env update` command updates an existing conda environment based on an environment definition file. This is useful for adding new packages or updating existing ones while preserving the environment.
+
+## Syntax
+
+```bash
+conda env update [options]
+```
+
+<Note>
+By default, `conda env update` uses `environment.yml` in the current directory and updates the currently active environment.
+</Note>
+
+## Target Environment Specification
+
+<ParamField path="-n, --name" type="string">
+  Name of environment to update. If not specified, conda will:
+  1. Use the name from the environment file
+  2. Fall back to the currently active environment (`CONDA_DEFAULT_ENV`)
+</ParamField>
+
+<ParamField path="-p, --prefix" type="string">
+  Full path to environment location (i.e. prefix).
+</ParamField>
+
+## File Options
+
+<ParamField path="-f, --file" type="string" default="environment.yml">
+  Environment definition file containing the packages to install or update.
+  
+  Supported formats:
+  - YAML environment files (environment.yml)
+  - Requirements.txt files
+  - Any format supported by environment specifier plugins
+</ParamField>
+
+## Update Behavior Options
+
+<ParamField path="--prune" type="boolean" default={false}>
+  Remove installed packages not defined in environment.yml. This makes the environment match the specification file exactly.
+  
+  <Warning>
+  Using `--prune` will remove any packages not listed in the environment file. This includes packages you may have manually installed.
+  </Warning>
+</ParamField>
+
+## Environment Specifier Options
+
+<ParamField path="--environment-specifier" type="string">
+  Specify which environment specifier plugin to use for parsing the environment file.
+</ParamField>
+
+## Frozen Environment Options
+
+<ParamField path="--override-frozen" type="boolean">
+  DANGEROUS. Use at your own risk. Ignore protections if the environment is frozen.
+  
+  <Warning>
+  Frozen environments are typically protected for a reason. Only use this flag if you understand the implications.
+  </Warning>
+</ParamField>
+
+## Solver Options
+
+<ParamField path="--solver" type="string">
+  Choose which solver backend to use.
+</ParamField>
+
+## Output and Prompt Options
+
+<ParamField path="--json" type="boolean">
+  Report all output as JSON. Suitable for using conda programmatically.
+</ParamField>
+
+<ParamField path="-v, --verbose" type="boolean">
+  Can be used multiple times. Once for INFO, twice for DEBUG, three times for TRACE.
+</ParamField>
+
+<ParamField path="-q, --quiet" type="boolean">
+  Do not display progress bar.
+</ParamField>
+
+## Examples
+
+### Update current environment
+
+```bash
+conda activate myenv
+conda env update
+```
+
+Updates the active environment using `environment.yml` in the current directory.
+
+### Update specific environment
+
+```bash
+conda env update -n myenv -f environment.yml
+```
+
+Updates `myenv` environment with packages from the specified file.
+
+### Update with pruning
+
+```bash
+conda env update --prune
+```
+
+Updates the environment and removes packages not listed in environment.yml.
+
+### Update from specific file
+
+```bash
+conda env update -f /path/to/environment.yml
+```
+
+Updates using a file from a specific location.
+
+### Update from requirements.txt
+
+```bash
+conda env update -f requirements.txt -n myenv
+```
+
+Updates environment using a pip requirements file.
+
+### Update with verbose output
+
+```bash
+conda env update -v
+```
+
+Shows detailed information during the update process.
+
+## Common Use Cases
+
+<AccordionGroup>
+  <Accordion title="Adding new dependencies to a project">
+    Update your environment.yml and apply changes:
+    
+    1. Edit environment.yml:
+    ```yaml
+    name: myproject
+    dependencies:
+      - python=3.11
+      - numpy
+      - pandas  # newly added
+    ```
+    
+    2. Update the environment:
+    ```bash
+    conda env update
+    ```
+  </Accordion>
+
+  <Accordion title="Synchronizing environments across team members">
+    Team members can update their environments to match the project specification:
+    
+    ```bash
+    git pull  # Get latest environment.yml
+    conda env update --prune  # Match exactly
+    ```
+  </Accordion>
+
+  <Accordion title="Updating package versions">
+    Change version constraints in environment.yml:
+    
+    ```yaml
+    dependencies:
+      - python=3.11
+      - pandas>=2.0  # Updated from pandas>=1.5
+    ```
+    
+    ```bash
+    conda env update
+    ```
+  </Accordion>
+
+  <Accordion title="Adding environment variables">
+    Update environment variables without recreating:
+    
+    ```yaml
+    name: myenv
+    dependencies:
+      - python=3.11
+    variables:
+      NEW_VAR: value  # Newly added
+    ```
+    
+    ```bash
+    conda env update
+    ```
+  </Accordion>
+
+  <Accordion title="Selective updates vs full sync">
+    Without `--prune` (additive):
+    ```bash
+    conda env update
+    # Adds/updates packages, keeps extra packages
+    ```
+    
+    With `--prune` (exact match):
+    ```bash
+    conda env update --prune
+    # Makes environment match file exactly
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Update Behavior
+
+### Without --prune (Default)
+
+- Packages in the file are installed or updated
+- Existing packages not in the file are kept
+- Dependencies are resolved and may be updated
+
+**Example:**
+
+Current environment: `python=3.11, numpy=1.24, pandas=1.5, matplotlib=3.7`
+
+Environment file:
+```yaml
+dependencies:
+  - python=3.11
+  - numpy=1.26
+  - pandas=2.0
+```
+
+Result: `python=3.11, numpy=1.26, pandas=2.0, matplotlib=3.7` (matplotlib kept)
+
+### With --prune
+
+- Packages in the file are installed or updated
+- Packages not in the file are removed
+- Environment matches the file exactly
+
+**Example:**
+
+Current environment: `python=3.11, numpy=1.24, pandas=1.5, matplotlib=3.7`
+
+Environment file:
+```yaml
+dependencies:
+  - python=3.11
+  - numpy=1.26
+  - pandas=2.0
+```
+
+Result: `python=3.11, numpy=1.26, pandas=2.0` (matplotlib removed)
+
+## Differences from conda env create
+
+| Feature | conda env create | conda env update |
+|---------|-----------------|------------------|
+| Target | Creates new environment | Updates existing environment |
+| Existing packages | N/A | Preserved by default |
+| --prune flag | N/A | Can remove unlisted packages |
+| Use case | Initial setup | Ongoing maintenance |
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Unable to determine environment">
+    Provide an explicit environment name:
+    
+    ```bash
+    conda env update -n myenv -f environment.yml
+    ```
+    
+    Or activate the environment first:
+    
+    ```bash
+    conda activate myenv
+    conda env update
+    ```
+  </Accordion>
+
+  <Accordion title="Environment is frozen">
+    If you get a frozen environment error:
+    
+    ```bash
+    conda env update --override-frozen
+    ```
+    
+    <Warning>
+    Only use this if you're sure about modifying a frozen environment.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="Conflicts after update">
+    If packages conflict after update, try:
+    
+    1. Use `--prune` for a clean state:
+    ```bash
+    conda env update --prune
+    ```
+    
+    2. Or recreate the environment:
+    ```bash
+    conda env remove -n myenv
+    conda env create -f environment.yml
+    ```
+  </Accordion>
+
+  <Accordion title="File not found">
+    Ensure the file exists:
+    
+    ```bash
+    ls -l environment.yml
+    conda env update -f ./environment.yml
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Version Control" icon="git">
+    Keep environment.yml in version control to track changes and coordinate with team members.
+  </Card>
+  
+  <Card title="Test Before Pruning" icon="flask">
+    Test `conda env update` without `--prune` first to ensure the update works as expected.
+  </Card>
+  
+  <Card title="Document Changes" icon="file">
+    Add comments to environment.yml explaining why packages are included or version-pinned.
+  </Card>
+  
+  <Card title="Regular Updates" icon="clock">
+    Periodically update environments to get security patches and bug fixes.
+  </Card>
+</CardGroup>
+
+## Related Commands
+
+- [`conda env create`](/commands/env-create) - Create a new environment from file
+- [`conda env export`](/commands/env-export) - Export environment to a file
+- [`conda update`](/commands/update) - Update packages in current environment
+- [`conda install`](/commands/install) - Install additional packages
+- [`conda env remove`](/commands/env-remove) - Remove an environment

@@ -1,0 +1,278 @@
+---
+title: conda install
+description: Install packages into a conda environment
+---
+
+## Overview
+
+The `conda install` command installs a list of packages into a specified conda environment. It accepts package specifications (e.g., `bitarray=0.8`) and installs a set of packages consistent with those specifications and compatible with the underlying environment.
+
+Conda attempts to install the newest versions of the requested packages. To accomplish this, it may update some packages that are already installed, or install additional packages.
+
+## Syntax
+
+```bash
+conda install [options] [package_spec ...]
+```
+
+## Target Environment Specification
+
+<ParamField path="-n, --name" type="string">
+  Name of environment.
+</ParamField>
+
+<ParamField path="-p, --prefix" type="string">
+  Full path to environment location (i.e. prefix).
+</ParamField>
+
+## Package Specifications
+
+<ParamField path="package_spec" type="string">
+  List of packages to install or update in the conda environment. Package specifications can include:
+  - Simple names: `numpy`
+  - Version constraints: `python=3.11`, `numpy>=1.20`
+  - Build specifications: `numpy=1.20=py39_0`
+  - Explicit filenames: `./lxml-3.2.0-py27_0.tar.bz2`
+</ParamField>
+
+<ParamField path="--file" type="string">
+  Read package versions from the given file. Repeated file specifications can be passed (e.g. `--file=file1 --file=file2`).
+</ParamField>
+
+<ParamField path="--revision" type="string">
+  Revert to the specified REVISION.
+</ParamField>
+
+## Solver Mode Modifiers
+
+<ParamField path="--freeze-installed, --no-update-deps" type="boolean">
+  Do not update or change already-installed dependencies. This may force conda to install older versions of the requested packages.
+</ParamField>
+
+<ParamField path="--update-deps" type="boolean">
+  Update dependencies that have available updates.
+</ParamField>
+
+<ParamField path="-S, --satisfied-skip-solve" type="boolean">
+  Exit early and do not run the solver if the requested specs are satisfied. Also skips aggressive updates as configured by the `aggressive_update_packages` config setting.
+</ParamField>
+
+<ParamField path="--update-all, --all" type="boolean">
+  Update all installed packages in the environment.
+</ParamField>
+
+<ParamField path="--update-specs" type="boolean">
+  Update based on provided specifications.
+</ParamField>
+
+<ParamField path="--no-deps" type="boolean">
+  Do not install, update, remove, or change dependencies. This WILL lead to broken environments and inconsistent behavior. Use at your own risk.
+</ParamField>
+
+<ParamField path="--only-deps" type="boolean">
+  Only install dependencies.
+</ParamField>
+
+<ParamField path="--force-reinstall" type="boolean">
+  Ensure that any user-requested package for the current operation is uninstalled and reinstalled, even if that package already exists in the environment.
+</ParamField>
+
+<ParamField path="--no-pin" type="boolean">
+  Ignore pinned file.
+</ParamField>
+
+<ParamField path="--strict-channel-priority" type="boolean">
+  Packages in lower priority channels are not considered if a package with the same name appears in a higher priority channel.
+</ParamField>
+
+<ParamField path="--no-channel-priority" type="boolean">
+  Package version takes precedence over channel priority. Overrides the value given by `conda config --show channel_priority`.
+</ParamField>
+
+<ParamField path="--solver" type="string">
+  Choose which solver backend to use.
+</ParamField>
+
+## Channel Customization
+
+<ParamField path="-c, --channel" type="string">
+  Additional channel to search for packages. These are URLs searched in the order they are given (including local directories using the `file://` syntax or simply a path like `/home/conda/mychan` or `../mychan`). Can be used multiple times.
+</ParamField>
+
+<ParamField path="--use-local" type="boolean">
+  Use locally built packages. Identical to `-c local`.
+</ParamField>
+
+<ParamField path="-O, --override-channels" type="boolean">
+  Do not search default or .condarc channels. Requires --channel.
+</ParamField>
+
+<ParamField path="--repodata-fn" type="string">
+  Specify file name of repodata on the remote server. Can be passed multiple times.
+</ParamField>
+
+<ParamField path="--experimental" type="string">
+  Enable experimental features. Options: `jlap` (download incremental package index data), `lock` (use locking when reading/updating index cache).
+</ParamField>
+
+<ParamField path="--no-lock" type="boolean">
+  Disable locking when reading, updating index (repodata.json) cache.
+</ParamField>
+
+<ParamField path="--repodata-use-zst / --no-repodata-use-zst" type="boolean">
+  Check for/do not check for repodata.json.zst. Enabled by default.
+</ParamField>
+
+## Package Linking and Install-time Options
+
+<ParamField path="--clobber" type="boolean">
+  Allow clobbering (i.e. overwriting) of overlapping file paths within packages and suppress related warnings.
+</ParamField>
+
+<ParamField path="--copy" type="boolean">
+  Install all packages using copies instead of hard- or soft-linking.
+</ParamField>
+
+<ParamField path="--no-shortcuts" type="boolean">
+  Don't install start menu shortcuts.
+</ParamField>
+
+<ParamField path="--shortcuts-only" type="string">
+  Install shortcuts only for this package name. Can be used several times.
+</ParamField>
+
+## Networking Options
+
+<ParamField path="-C, --use-index-cache" type="boolean">
+  Use cache of channel index files, even if it has expired. This is useful if you don't want conda to check whether a new version of the repodata file exists.
+</ParamField>
+
+<ParamField path="-k, --insecure" type="boolean">
+  Allow conda to perform "insecure" SSL connections and transfers. Equivalent to setting `ssl_verify` to `false`.
+</ParamField>
+
+<ParamField path="--offline" type="boolean">
+  Offline mode. Don't connect to the Internet.
+</ParamField>
+
+## Output, Prompt, and Flow Control Options
+
+<ParamField path="--download-only" type="boolean">
+  Solve an environment and ensure package caches are populated, but exit prior to unlinking and linking packages into the prefix.
+</ParamField>
+
+<ParamField path="--show-channel-urls" type="boolean">
+  Show channel urls. Overrides the value given by `conda config --show show_channel_urls`.
+</ParamField>
+
+<ParamField path="--json" type="boolean">
+  Report all output as json. Suitable for using conda programmatically.
+</ParamField>
+
+<ParamField path="-v, --verbose" type="boolean">
+  Can be used multiple times. Once for detailed output, twice for INFO logging, thrice for DEBUG logging, four times for TRACE logging.
+</ParamField>
+
+<ParamField path="-q, --quiet" type="boolean">
+  Do not display progress bar.
+</ParamField>
+
+<ParamField path="-d, --dry-run" type="boolean">
+  Only display what would have been done.
+</ParamField>
+
+<ParamField path="-y, --yes" type="boolean">
+  Sets any confirmation values to 'yes' automatically. Users will not be asked to confirm any adding, deleting, backups, etc.
+</ParamField>
+
+## Environment Protection
+
+<ParamField path="--override-frozen" type="boolean">
+  DANGEROUS. Use at your own risk. Ignore protections if the environment is frozen.
+</ParamField>
+
+## Examples
+
+<CodeGroup>
+```bash Install single package
+conda install scipy
+```
+
+```bash Install to specific environment
+conda install -n myenv scipy curl wheel
+```
+
+```bash Install specific version
+conda install -p path/to/myenv python=3.11
+```
+
+```bash Install from specific channel
+conda install -c conda-forge numpy
+```
+
+```bash Install without updating dependencies
+conda install --freeze-installed pandas
+```
+
+```bash Install from file
+conda install --file requirements.txt
+```
+
+```bash Install with version constraint
+conda install "numpy>=1.20,<2.0"
+```
+
+```bash Dry run to preview changes
+conda install --dry-run scikit-learn
+```
+</CodeGroup>
+
+## Common Use Cases
+
+### Installing Multiple Packages
+
+Install multiple packages in a single command:
+
+```bash
+conda install numpy pandas matplotlib scikit-learn
+```
+
+### Installing to a New Environment
+
+Install packages to a named environment:
+
+```bash
+conda install -n data-science jupyter notebook pandas
+```
+
+### Installing with Channel Priority
+
+Install from conda-forge with strict channel priority:
+
+```bash
+conda install -c conda-forge --strict-channel-priority tensorflow
+```
+
+### Installing Without Breaking Dependencies
+
+Use `--freeze-installed` to prevent updates to existing packages:
+
+```bash
+conda install --freeze-installed new-package
+```
+
+### Reverting to Previous State
+
+Revert environment to a previous revision:
+
+```bash
+conda install --revision 2
+```
+
+<Note>
+  When using explicit filenames (e.g., `./package.tar.bz2`), conda implies the `--no-deps` option and should be used with great caution. Explicit filenames and package specifications cannot be mixed in a single command.
+</Note>
+
+<Warning>
+  Using `--no-deps` may result in an environment with incompatible packages. Use this option with great caution.
+</Warning>

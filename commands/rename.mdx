@@ -1,0 +1,213 @@
+---
+title: conda rename
+description: Rename an existing environment
+---
+
+The `conda rename` command renames an existing conda environment by cloning it to a new location and removing the original.
+
+## Syntax
+
+```bash
+conda rename [options] DESTINATION
+```
+
+## Arguments
+
+### `DESTINATION`
+New name for the conda environment.
+
+Can be either:
+- A simple name (environment will be created in default envs directory)
+- A full path (environment will be created at that location)
+
+```bash
+conda rename -n oldenv newenv
+conda rename -n oldenv /path/to/newenv
+```
+
+## Options
+
+### `-n, --name NAME`
+Name of the environment to rename.
+
+```bash
+conda rename -n test123 test321
+conda rename --name test123 test321
+```
+
+### `-p, --prefix PREFIX`
+Full path to the environment prefix to rename.
+
+```bash
+conda rename -p /path/to/test123 test321
+conda rename --prefix /path/to/test123 test321
+```
+
+### `-y, --yes`
+Do not ask for confirmation. If the destination environment already exists, it will be overwritten.
+
+```bash
+conda rename -n oldenv newenv --yes
+```
+
+<Warning>
+Using `--yes` will overwrite the destination environment if it already exists without prompting.
+</Warning>
+
+### `-d, --dry-run`
+Only display what would have been done without making any changes.
+
+```bash
+conda rename -n oldenv newenv --dry-run
+```
+
+### `-q, --quiet`
+Do not display progress bar.
+
+```bash
+conda rename -n oldenv newenv --quiet
+```
+
+### `--json`
+Report all output as JSON.
+
+```bash
+conda rename -n oldenv newenv --json
+```
+
+## Restrictions
+
+The following environments **cannot be renamed**:
+
+1. **Base environment**: The root conda environment cannot be renamed
+2. **Currently active environment**: You must deactivate an environment before renaming it
+3. **Default activation environment**: If an environment is configured as `default_activation_env` in your conda configuration, it cannot be renamed
+
+## Common Use Cases
+
+### Rename environment by name
+
+```bash
+conda rename -n test123 test321
+```
+
+### Rename environment by path
+
+```bash
+conda rename -p /path/to/test123 test321
+```
+
+### Preview rename operation
+
+See what would happen without making changes:
+
+```bash
+conda rename -n oldenv newenv --dry-run
+```
+
+Output:
+```
+DRY RUN PREFIX clone /path/to/oldenv,/path/to/newenv
+DRY RUN PREFIX rm_rf /path/to/oldenv
+```
+
+### Force rename without confirmation
+
+```bash
+conda rename -n oldenv newenv --yes
+```
+
+### Rename to specific path
+
+```bash
+conda rename -n myenv /custom/path/mynewenv
+```
+
+## How It Works
+
+The `conda rename` command performs the following steps:
+
+1. **Validates source environment**:
+   - Ensures the environment exists
+   - Checks it's not the base environment
+   - Checks it's not currently active
+   - Checks it's not the default activation environment
+
+2. **Validates destination**:
+   - Ensures destination doesn't exist (or `--yes` is used)
+   - Validates the destination path/name is valid
+
+3. **Clones the environment**:
+   - Creates a complete copy of the environment at the new location
+   - Preserves all packages and their versions
+
+4. **Removes the original**:
+   - Deletes the original environment directory
+
+<Note>
+The rename operation is atomic when using the `--yes` flag, meaning if something goes wrong, the operation is rolled back.
+</Note>
+
+## Example: Complete Workflow
+
+```bash
+# Create an environment
+conda create -n development python=3.11 numpy pandas
+
+# Later, rename it
+conda rename -n development production
+
+# Verify the rename
+conda env list
+```
+
+## Error Handling
+
+### Base environment error
+
+```bash
+conda rename -n base newname
+```
+```
+CondaEnvException: The 'base' environment cannot be renamed
+```
+
+### Active environment error
+
+```bash
+conda activate myenv
+conda rename -n myenv newname
+```
+```
+CondaEnvException: Cannot rename the active environment
+```
+
+**Solution**: Deactivate first:
+```bash
+conda deactivate
+conda rename -n myenv newname
+```
+
+### Destination exists error
+
+```bash
+conda rename -n oldenv existingenv
+```
+```
+CondaEnvException: The environment 'existingenv' already exists. Override with --yes.
+```
+
+**Solution**: Use `--yes` to overwrite or choose a different name:
+```bash
+conda rename -n oldenv existingenv --yes
+```
+
+## Performance Considerations
+
+- Renaming large environments can take time as it involves cloning all packages
+- The operation requires enough disk space to temporarily hold both environments
+- Network access is not required (unlike `conda create`)
+
+<Note>
+Unlike creating a new environment from scratch, renaming preserves the exact state of the original environment, including all package metadata and history.
+</Note>

@@ -1,0 +1,452 @@
+---
+title: Commands Overview
+description: Complete reference for all conda command-line interface commands
+---
+
+Conda provides a comprehensive set of commands for managing packages, environments, and configurations. This page provides an overview of all available commands organized by category.
+
+## Command Structure
+
+All conda commands follow the pattern:
+
+```bash
+conda <command> [options] [arguments]
+```
+
+<Info>
+Use `conda <command> --help` to see detailed help for any command.
+</Info>
+
+## Command Categories
+
+<CardGroup cols={2}>
+  <Card title="Package Management" icon="box" href="#package-management">
+    Install, update, remove, and search for packages
+  </Card>
+  <Card title="Environment Management" icon="layer-group" href="#environment-management">
+    Create, activate, and manage conda environments
+  </Card>
+  <Card title="Configuration" icon="gear" href="#configuration">
+    Configure conda settings and channels
+  </Card>
+  <Card title="Information" icon="circle-info" href="#information">
+    View system information and package details
+  </Card>
+  <Card title="Maintenance" icon="broom" href="#maintenance">
+    Clean caches and manage conda itself
+  </Card>
+  <Card title="Advanced" icon="flask" href="#advanced">
+    Advanced operations and utilities
+  </Card>
+</CardGroup>
+
+## Package Management
+
+Commands for installing, updating, removing, and searching for packages.
+
+| Command | Description | Common Usage |
+|---------|-------------|--------------|
+| `install` | Install packages into an environment | `conda install numpy` |
+| `update` (or `upgrade`) | Update packages to latest compatible versions | `conda update scipy` |
+| `remove` (or `uninstall`) | Remove packages from an environment | `conda remove pandas` |
+| `search` | Search for packages using MatchSpec format | `conda search "numpy>=1.12"` |
+| `list` | List installed packages in an environment | `conda list` |
+
+<Accordion title="Package Management Patterns">
+**Installing Packages**
+```bash
+# Install a single package
+conda install package-name
+
+# Install multiple packages
+conda install numpy scipy pandas
+
+# Install specific version
+conda install python=3.11
+
+# Install from specific channel
+conda install -c conda-forge matplotlib
+```
+
+**Updating Packages**
+```bash
+# Update specific package
+conda update numpy
+
+# Update all packages
+conda update --all
+
+# Update with dependencies frozen
+conda update --no-update-deps scipy
+```
+
+**Removing Packages**
+```bash
+# Remove specific package
+conda remove numpy
+
+# Remove multiple packages
+conda remove numpy scipy pandas
+
+# Force removal without dependency check
+conda remove --force-remove package-name
+```
+</Accordion>
+
+## Environment Management
+
+Commands for creating and managing isolated conda environments.
+
+| Command | Description | Common Usage |
+|---------|-------------|--------------|
+| `create` | Create a new conda environment | `conda create -n myenv python=3.11` |
+| `env` | Parent command for environment operations | `conda env list` |
+| `env create` | Create environment from YAML file | `conda env create -f environment.yml` |
+| `env list` | List all conda environments | `conda env list` |
+| `env remove` | Remove an environment | `conda env remove -n myenv` |
+| `env update` | Update environment from YAML file | `conda env update -f environment.yml` |
+| `env export` | Export environment to YAML file | `conda env export > environment.yml` |
+| `env config` | Configure environment-specific settings | `conda env config vars list` |
+| `activate` | Activate a conda environment | `conda activate myenv` |
+| `deactivate` | Deactivate current environment | `conda deactivate` |
+| `rename` | Rename an existing environment | `conda rename -n oldenv newenv` |
+
+<Accordion title="Environment Management Patterns">
+**Creating Environments**
+```bash
+# Create empty environment
+conda create -n myenv
+
+# Create with specific Python version
+conda create -n myenv python=3.11
+
+# Create with packages
+conda create -n myenv python=3.11 numpy pandas
+
+# Create from environment file
+conda env create -f environment.yml
+
+# Clone existing environment
+conda create -n env2 --clone env1
+```
+
+**Working with Environments**
+```bash
+# List all environments
+conda env list
+
+# Activate environment
+conda activate myenv
+
+# Deactivate environment
+conda deactivate
+
+# Export environment
+conda env export > environment.yml
+conda env export --from-history > environment.yml
+
+# Remove environment
+conda env remove -n myenv
+
+# Remove all packages but keep environment
+conda remove -n myenv --all --keep-env
+```
+</Accordion>
+
+## Configuration
+
+Commands for managing conda configuration settings.
+
+| Command | Description | Common Usage |
+|---------|-------------|--------------|
+| `config` | Modify configuration values in .condarc | `conda config --show` |
+
+<Accordion title="Configuration Patterns">
+**Viewing Configuration**
+```bash
+# Show all configuration
+conda config --show
+
+# Show specific setting
+conda config --show channels
+
+# Show configuration sources
+conda config --show-sources
+
+# Describe configuration options
+conda config --describe
+conda config --describe channel_priority
+```
+
+**Modifying Configuration**
+```bash
+# Add channel (highest priority)
+conda config --add channels conda-forge
+
+# Append channel (lowest priority)
+conda config --append channels bioconda
+
+# Set configuration value
+conda config --set channel_priority strict
+
+# Remove channel
+conda config --remove channels conda-forge
+
+# Remove configuration key
+conda config --remove-key auto_update_conda
+```
+
+**Configuration Scopes**
+```bash
+# Modify user config (~/.condarc)
+conda config --add channels conda-forge
+
+# Modify system config
+conda config --add channels conda-forge --system
+
+# Modify environment config
+conda config --add channels conda-forge --env
+
+# Modify specific file
+conda config --add channels conda-forge --file /path/to/.condarc
+```
+</Accordion>
+
+## Information
+
+Commands for viewing information about conda, environments, and packages.
+
+| Command | Description | Common Usage |
+|---------|-------------|--------------|
+| `info` | Display information about conda installation | `conda info` |
+| `list` | List installed packages | `conda list` |
+| `search` | Search for packages with detailed info | `conda search numpy --info` |
+| `compare` | Compare packages between environments | `conda compare env1 env2` |
+| `export` | Export environment specification | `conda export` |
+
+<Accordion title="Information Patterns">
+**System Information**
+```bash
+# Show conda information
+conda info
+
+# Show base environment path
+conda info --base
+
+# List all environments
+conda info --envs
+
+# Show system information
+conda info --system
+
+# Show all information
+conda info --all
+```
+
+**Package Information**
+```bash
+# List packages in current environment
+conda list
+
+# List packages matching pattern
+conda list numpy
+
+# List with full details
+conda list --show-channel-urls
+
+# Export package list
+conda list --export > packages.txt
+
+# Show package revisions
+conda list --revisions
+
+# List with sizes
+conda list --size
+
+# Search package details
+conda search numpy --info
+```
+</Accordion>
+
+## Maintenance
+
+Commands for cleaning caches and maintaining conda.
+
+| Command | Description | Common Usage |
+|---------|-------------|--------------|
+| `clean` | Remove unused packages and caches | `conda clean --all` |
+| `notices` | View and manage conda notices | `conda notices` |
+
+<Accordion title="Maintenance Patterns">
+**Cleaning Caches**
+```bash
+# Clean all (index, packages, tarballs, logs)
+conda clean --all
+
+# Clean package tarballs
+conda clean --tarballs
+
+# Clean unused packages
+conda clean --packages
+
+# Clean index cache
+conda clean --index-cache
+
+# Clean log files
+conda clean --logfiles
+
+# Clean temporary files
+conda clean --tempfiles
+
+# Force removal of all package caches
+conda clean --force-pkgs-dirs
+```
+
+**Viewing Notices**
+```bash
+# View all notices
+conda notices
+
+# View notices in JSON format
+conda notices --json
+```
+</Accordion>
+
+## Advanced
+
+Advanced commands for specialized operations.
+
+| Command | Description | Common Usage |
+|---------|-------------|--------------|
+| `run` | Run a command in a conda environment | `conda run -n myenv python script.py` |
+| `init` | Initialize conda for shell interaction | `conda init bash` |
+| `package` | Create and extract conda packages | `conda package -w myenv` |
+| `commands` | List all available conda commands | `conda commands` |
+
+<Accordion title="Advanced Patterns">
+**Running Commands**
+```bash
+# Run command in specific environment
+conda run -n myenv python script.py
+
+# Run command with environment variables
+conda run -n myenv --env MY_VAR=value python script.py
+
+# Run without capturing output
+conda run -n myenv --no-capture-output python script.py
+```
+
+**Shell Integration**
+```bash
+# Initialize conda for bash
+conda init bash
+
+# Initialize for zsh
+conda init zsh
+
+# Initialize for fish
+conda init fish
+
+# Initialize for PowerShell
+conda init powershell
+
+# Reverse initialization
+conda init --reverse
+```
+
+**Package Operations**
+```bash
+# Create package from environment
+conda package -w /path/to/env
+
+# Extract package
+conda package -u package.tar.bz2
+
+# Reset extracted package
+conda package --reset
+```
+</Accordion>
+
+## Common Conventions
+
+### Environment Targeting
+
+Most commands accept options to specify which environment to operate on:
+
+| Option | Description | Example |
+|--------|-------------|---------|
+| `-n NAME` or `--name NAME` | Target environment by name | `conda install -n myenv numpy` |
+| `-p PATH` or `--prefix PATH` | Target environment by path | `conda install -p /path/to/env numpy` |
+| (none) | Use currently active environment | `conda install numpy` |
+
+### Output Formats
+
+Many commands support different output formats:
+
+| Option | Description | Usage |
+|--------|-------------|-------|
+| `--json` | Output in JSON format | `conda list --json` |
+| `--quiet` or `-q` | Suppress output | `conda install -q numpy` |
+| `--verbose` or `-v` | Increase output verbosity | `conda install -vv numpy` |
+
+### Dry Run and Safety
+
+| Option | Description | Usage |
+|--------|-------------|-------|
+| `--dry-run` | Show what would happen without executing | `conda install --dry-run numpy` |
+| `--yes` or `-y` | Automatically confirm prompts | `conda remove -y numpy` |
+
+### Channel Options
+
+| Option | Description | Example |
+|--------|-------------|---------|
+| `-c CHANNEL` or `--channel CHANNEL` | Add channel for this command | `conda install -c conda-forge package` |
+| `--override-channels` | Use only specified channels | `conda search --override-channels -c main numpy` |
+
+## Plugin Commands
+
+Conda supports plugin-based subcommands through its plugin system. Additional commands may be available depending on installed plugins. Use `conda commands` to see all available commands including those from plugins.
+
+<Warning>
+Plugin commands with names matching built-in commands will be ignored. Built-in commands always take precedence.
+</Warning>
+
+## Deprecated Commands
+
+Some commands have aliases for backward compatibility:
+
+- `conda upgrade` → Use `conda update`
+- `conda uninstall` → Use `conda remove`
+
+## Getting Help
+
+```bash
+# General help
+conda --help
+
+# Command-specific help
+conda install --help
+
+# Show conda version
+conda --version
+
+# List all commands
+conda commands
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation Commands" icon="download" href="/commands/install">
+    Learn about package installation options
+  </Card>
+  <Card title="Environment Commands" icon="layer-group" href="/commands/create">
+    Master environment management
+  </Card>
+  <Card title="Configuration Guide" icon="gear" href="/commands/config">
+    Configure conda for your workflow
+  </Card>
+  <Card title="Advanced Features" icon="terminal" href="/advanced/python-api">
+    Python API and plugin development
+  </Card>
+</CardGroup>

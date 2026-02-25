@@ -1,0 +1,285 @@
+---
+title: Solver
+description: High-level API to conda's dependency solving logic
+---
+
+<Warning>
+**Beta** - While in beta, expect both major and minor changes across minor releases.
+</Warning>
+
+## Overview
+
+The `Solver` class provides high-level access to conda's dependency solving logic. It takes a set of package specifications and computes the optimal set of packages to install, update, or remove from an environment.
+
+## Constructor
+
+```python
+from conda.api import Solver
+
+solver = Solver(
+    prefix="/path/to/env",
+    channels=["conda-forge", "defaults"],
+    subdirs=["linux-64", "noarch"],
+    specs_to_add=[MatchSpec("numpy")],
+    specs_to_remove=[]
+)
+```
+
+<ParamField path="prefix" type="str" required>
+  The conda prefix / environment location for which the Solver is being instantiated.
+</ParamField>
+
+<ParamField path="channels" type="Sequence[Channel]" required>
+  A prioritized list of channels to use for the solution. Can be Channel objects or strings.
+</ParamField>
+
+<ParamField path="subdirs" type="Sequence[str]" default="()">
+  A prioritized list of subdirs to use for the solution (e.g., `["linux-64", "noarch"]`).
+</ParamField>
+
+<ParamField path="specs_to_add" type="set[MatchSpec]" default="()">
+  The set of package specs to add to the prefix.
+</ParamField>
+
+<ParamField path="specs_to_remove" type="set[MatchSpec]" default="()">
+  The set of package specs to remove from the prefix.
+</ParamField>
+
+## Methods
+
+### solve_final_state
+
+```python
+final_state = solver.solve_final_state(
+    update_modifier=None,
+    deps_modifier=None,
+    prune=None,
+    ignore_pinned=None,
+    force_remove=None
+)
+```
+
+Gives the final, solved state of the environment.
+
+<ParamField path="update_modifier" type="UpdateModifier" default="NULL">
+  An optional flag indicating special solver handling for updates. See `conda.api.UpdateModifier`.
+</ParamField>
+
+<ParamField path="deps_modifier" type="DepsModifier" default="NULL">
+  An optional flag indicating special solver handling for dependencies. The default solver behavior is to be as conservative as possible with dependency updates while still ensuring all dependencies are satisfied.
+  
+  Options include:
+  - `NO_DEPS` - Don't install dependencies
+  - `ONLY_DEPS` - Install only dependencies, not the requested packages
+  - `UPDATE_DEPS` - Update dependencies to their latest versions
+  - `UPDATE_DEPS_ONLY_DEPS` - Update only dependencies
+  - `FREEZE_INSTALLED` - Don't update any installed packages
+</ParamField>
+
+<ParamField path="prune" type="bool" default="NULL">
+  If `True`, the solution will not contain packages that were previously brought into the environment as dependencies but are no longer required as dependencies and are not user-requested.
+</ParamField>
+
+<ParamField path="ignore_pinned" type="bool" default="NULL">
+  If `True`, the solution will ignore pinned package configuration for the prefix.
+</ParamField>
+
+<ParamField path="force_remove" type="bool" default="NULL">
+  Forces removal of a package without removing packages that depend on it.
+</ParamField>
+
+<ResponseField name="return" type="tuple[PackageRef]">
+  In sorted dependency order from roots to leaves, the package references for the solved state of the environment.
+</ResponseField>
+
+#### Example
+
+```python
+from conda.api import Solver, DepsModifier
+from conda.models.match_spec import MatchSpec
+
+solver = Solver(
+    prefix="/opt/conda/envs/myenv",
+    channels=["conda-forge"],
+    subdirs=["linux-64", "noarch"],
+    specs_to_add=[MatchSpec("pandas"), MatchSpec("scikit-learn>=1.0")]
+)
+
+# Get the final state with dependency updates
+final_state = solver.solve_final_state(
+    deps_modifier=DepsModifier.UPDATE_DEPS,
+    prune=True
+)
+
+for package in final_state:
+    print(f"{package.name}-{package.version}-{package.build}")
+```
+
+### solve_for_diff
+
+```python
+to_remove, to_add = solver.solve_for_diff(
+    update_modifier=None,
+    deps_modifier=None,
+    prune=None,
+    ignore_pinned=None,
+    force_remove=None,
+    force_reinstall=False
+)
+```
+
+Gives the package references to remove from an environment, followed by the package references to add to an environment.
+
+<ParamField path="update_modifier" type="UpdateModifier" default="NULL">
+  See `solve_final_state`.
+</ParamField>
+
+<ParamField path="deps_modifier" type="DepsModifier" default="NULL">
+  See `solve_final_state`.
+</ParamField>
+
+<ParamField path="prune" type="bool" default="NULL">
+  See `solve_final_state`.
+</ParamField>
+
+<ParamField path="ignore_pinned" type="bool" default="NULL">
+  See `solve_final_state`.
+</ParamField>
+
+<ParamField path="force_remove" type="bool" default="NULL">
+  See `solve_final_state`.
+</ParamField>
+
+<ParamField path="force_reinstall" type="bool" default="False">
+  For requested specs_to_add that are already satisfied in the environment, instructs the solver to remove the package and spec from the environment, and then add it back--possibly with the exact package instance modified, depending on the spec exactness.
+</ParamField>
+
+<ResponseField name="return" type="tuple[tuple[PackageRef], tuple[PackageRef]]">
+  A two-tuple of PackageRef sequences:
+  - First tuple: packages to remove from the environment, in sorted dependency order from leaves to roots
+  - Second tuple: packages to add to the environment, in sorted dependency order from roots to leaves
+</ResponseField>
+
+#### Example
+
+```python
+from conda.api import Solver
+from conda.models.match_spec import MatchSpec
+
+solver = Solver(
+    prefix="/opt/conda/envs/myenv",
+    channels=["conda-forge"],
+    subdirs=["linux-64", "noarch"],
+    specs_to_add=[MatchSpec("numpy>=1.21")]
+)
+
+to_remove, to_add = solver.solve_for_diff(prune=True)
+
+print("Packages to remove:")
+for package in to_remove:
+    print(f"  - {package.name}-{package.version}")
+
+print("\nPackages to add:")
+for package in to_add:
+    print(f"  + {package.name}-{package.version}")
+```
+
+### solve_for_transaction
+
+```python
+transaction = solver.solve_for_transaction(
+    update_modifier=None,
+    deps_modifier=None,
+    prune=None,
+    ignore_pinned=None,
+    force_remove=None,
+    force_reinstall=False
+)
+```
+
+Gives an `UnlinkLinkTransaction` instance that can be used to execute the solution on an environment.
+
+<ParamField path="update_modifier" type="UpdateModifier" default="NULL">
+  See `solve_final_state`.
+</ParamField>
+
+<ParamField path="deps_modifier" type="DepsModifier" default="NULL">
+  See `solve_final_state`.
+</ParamField>
+
+<ParamField path="prune" type="bool" default="NULL">
+  See `solve_final_state`.
+</ParamField>
+
+<ParamField path="ignore_pinned" type="bool" default="NULL">
+  See `solve_final_state`.
+</ParamField>
+
+<ParamField path="force_remove" type="bool" default="NULL">
+  See `solve_final_state`.
+</ParamField>
+
+<ParamField path="force_reinstall" type="bool" default="False">
+  See `solve_for_diff`.
+</ParamField>
+
+<ResponseField name="return" type="UnlinkLinkTransaction">
+  A transaction object that can be executed to apply the changes to the environment.
+</ResponseField>
+
+#### Example
+
+```python
+from conda.api import Solver
+from conda.models.match_spec import MatchSpec
+
+solver = Solver(
+    prefix="/opt/conda/envs/myenv",
+    channels=["conda-forge"],
+    subdirs=["linux-64", "noarch"],
+    specs_to_add=[MatchSpec("requests")]
+)
+
+transaction = solver.solve_for_transaction()
+
+# Execute the transaction to apply changes
+transaction.execute()
+```
+
+## Complete Example
+
+```python
+from conda.api import Solver, DepsModifier
+from conda.models.match_spec import MatchSpec
+
+# Create a solver for adding matplotlib to an environment
+solver = Solver(
+    prefix="/home/user/miniconda3/envs/dataenv",
+    channels=["conda-forge", "defaults"],
+    subdirs=["linux-64", "noarch"],
+    specs_to_add=[
+        MatchSpec("matplotlib>=3.5"),
+        MatchSpec("numpy>=1.20")
+    ]
+)
+
+# Option 1: Get the complete final state
+print("Final environment state:")
+final_state = solver.solve_final_state(deps_modifier=DepsModifier.UPDATE_DEPS)
+for pkg in final_state:
+    print(f"  {pkg.name} {pkg.version}")
+
+# Option 2: Get what will change
+print("\nChanges to apply:")
+to_remove, to_add = solver.solve_for_diff()
+if to_remove:
+    print(f"Removing {len(to_remove)} packages")
+if to_add:
+    print(f"Installing {len(to_add)} packages")
+
+# Option 3: Execute the transaction
+print("\nApplying changes...")
+transaction = solver.solve_for_transaction()
+transaction.execute()
+print("Done!")
+```

@@ -1,0 +1,439 @@
+---
+title: conda env export
+description: Export a conda environment to a file or stdout
+---
+
+## Overview
+
+The `conda env export` command exports a given environment's package specifications to a file or stdout. This is essential for creating reproducible environments and sharing environment specifications with others.
+
+<Note>
+This command is also available as `conda export` (without the `env` subcommand).
+</Note>
+
+## Syntax
+
+```bash
+conda env export [options]
+```
+
+By default, exports the currently active environment to stdout in YAML format.
+
+## Target Environment Specification
+
+<ParamField path="-n, --name" type="string">
+  Name of environment to export. If not specified, exports the currently active environment.
+</ParamField>
+
+<ParamField path="-p, --prefix" type="string">
+  Full path to environment location (i.e. prefix) to export.
+</ParamField>
+
+## Output Options
+
+<ParamField path="-f, --file" type="string">
+  File name or path for the exported environment.
+  
+  <Warning>
+  This will silently overwrite any existing file of the same name in the current directory.
+  </Warning>
+</ParamField>
+
+<ParamField path="--format" type="string">
+  Format for the exported environment. Available formats depend on installed plugins.
+  
+  Common formats:
+  - `yaml` or `environment-yaml` - Standard YAML format (default)
+  - `json` or `environment-json` - JSON format
+  
+  If not specified, format is determined by:
+  1. File extension (if `--file` is used)
+  2. Default to YAML
+</ParamField>
+
+<ParamField path="--json" type="boolean">
+  For backwards compatibility: when used without `--format` and without `--file`, exports in JSON format.
+  
+  If used with `--file`, only affects status messages (not the export format).
+</ParamField>
+
+## Channel Options
+
+<ParamField path="-c, --channel" type="string">
+  Additional channel to include in the export. Can be specified multiple times.
+</ParamField>
+
+<ParamField path="-O, --override-channels" type="boolean">
+  Do not include .condarc channels in the export.
+</ParamField>
+
+<ParamField path="--ignore-channels" type="boolean" default={false}>
+  Do not include channel names with package names in the export.
+  
+  <Tip>
+  Use this when you want package specifications without channel prefixes (e.g., `numpy` instead of `conda-forge::numpy`).
+  </Tip>
+</ParamField>
+
+## Platform Options
+
+<ParamField path="--platform, --subdir" type="string">
+  Target platform(s)/subdir(s) for export (e.g., linux-64, osx-64, win-64). Can be specified multiple times for multi-platform exports.
+  
+  <Note>
+  Multi-platform export is only supported by certain exporters (like environment-yaml).
+  </Note>
+</ParamField>
+
+<ParamField path="--override-platforms" type="boolean">
+  Override the platforms specified in the condarc.
+</ParamField>
+
+## Package Specification Options
+
+<ParamField path="--from-history" type="boolean" default={false}>
+  Build environment spec from explicit specs in history (packages you explicitly installed) rather than all packages.
+  
+  <Tip>
+  Recommended for creating portable, minimal environment specifications. This exports only the packages you explicitly requested, not their dependencies.
+  </Tip>
+</ParamField>
+
+<ParamField path="--no-builds" type="boolean" default={false}>
+  Remove build specification from dependencies. This makes the export more portable across platforms.
+  
+  Example:
+  - With builds: `numpy=1.24.0=py311h1234567_0`
+  - Without builds: `numpy=1.24.0`
+</ParamField>
+
+## Output Control
+
+<ParamField path="-v, --verbose" type="boolean">
+  Can be used multiple times. Once for INFO, twice for DEBUG, three times for TRACE.
+</ParamField>
+
+<ParamField path="-q, --quiet" type="boolean">
+  Do not display progress bar.
+</ParamField>
+
+## Export Formats
+
+### YAML Format (Default)
+
+The standard conda environment format:
+
+```yaml
+name: myenv
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11.0=h1234567_0
+  - numpy=1.24.0=py311h1234567_0
+  - pandas=1.5.3=py311h1234567_0
+  - pip:
+    - requests==2.28.2
+prefix: /home/user/miniconda3/envs/myenv
+```
+
+### JSON Format
+
+Structured JSON output:
+
+```json
+{
+  "name": "myenv",
+  "channels": [
+    "conda-forge",
+    "defaults"
+  ],
+  "dependencies": [
+    "python=3.11.0=h1234567_0",
+    "numpy=1.24.0=py311h1234567_0"
+  ],
+  "prefix": "/home/user/miniconda3/envs/myenv"
+}
+```
+
+## Examples
+
+### Export current environment to stdout
+
+```bash
+conda env export
+```
+
+Exports the active environment in YAML format to the terminal.
+
+### Export to a file
+
+```bash
+conda env export --file environment.yml
+```
+
+Exports to `environment.yml` in the current directory.
+
+### Export specific environment
+
+```bash
+conda env export -n myenv --file myenv.yml
+```
+
+Exports the `myenv` environment to a file.
+
+### Export with minimal specification
+
+```bash
+conda env export --from-history --file environment.yml
+```
+
+Exports only explicitly installed packages (recommended for portability).
+
+### Export without build strings
+
+```bash
+conda env export --no-builds --file environment.yml
+```
+
+Exports without platform-specific build identifiers.
+
+### Export in JSON format
+
+```bash
+conda env export --format json --file environment.json
+```
+
+or for backwards compatibility:
+
+```bash
+conda env export --json > environment.json
+```
+
+### Export without channels
+
+```bash
+conda env export --ignore-channels --file environment.yml
+```
+
+Exports packages without channel prefixes.
+
+### Export for multiple platforms
+
+```bash
+conda env export --platform linux-64 --platform osx-64 --file environment.yml
+```
+
+Creates a multi-platform environment file.
+
+### Export from history without builds
+
+```bash
+conda env export --from-history --no-builds --file environment.yml
+```
+
+Creates the most portable environment specification.
+
+## Common Use Cases
+
+<AccordionGroup>
+  <Accordion title="Share environment with team">
+    Export a minimal, portable specification:
+    
+    ```bash
+    conda env export --from-history --no-builds --file environment.yml
+    ```
+    
+    Team members can recreate with:
+    
+    ```bash
+    conda env create -f environment.yml
+    ```
+  </Accordion>
+
+  <Accordion title="Exact environment reproduction">
+    Export with full specifications for exact reproduction:
+    
+    ```bash
+    conda env export --file environment-exact.yml
+    ```
+    
+    This includes all dependencies with exact versions and builds.
+  </Accordion>
+
+  <Accordion title="Cross-platform development">
+    Export without build strings for cross-platform compatibility:
+    
+    ```bash
+    conda env export --no-builds --from-history --file environment.yml
+    ```
+  </Accordion>
+
+  <Accordion title="Version control">
+    Create minimal environment file for version control:
+    
+    ```bash
+    conda env export --from-history --no-builds --file environment.yml
+    git add environment.yml
+    git commit -m "Add environment specification"
+    ```
+  </Accordion>
+
+  <Accordion title="Backup before major changes">
+    Backup environment before updates:
+    
+    ```bash
+    conda env export --file backup-$(date +%Y%m%d).yml
+    conda update --all
+    ```
+  </Accordion>
+
+  <Accordion title="CI/CD pipelines">
+    Export for reproducible testing:
+    
+    ```bash
+    conda env export --from-history --no-builds --file ci-environment.yml
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Export Strategies
+
+<CardGroup cols={2}>
+  <Card title="Minimal Export" icon="minimize">
+    **Best for: Sharing and version control**
+    
+    ```bash
+    conda env export --from-history --no-builds
+    ```
+    
+    - Only explicitly installed packages
+    - No build strings
+    - Most portable
+  </Card>
+  
+  <Card title="Complete Export" icon="list">
+    **Best for: Exact reproduction**
+    
+    ```bash
+    conda env export
+    ```
+    
+    - All packages including dependencies
+    - Full version and build specs
+    - Platform-specific
+  </Card>
+  
+  <Card title="Cross-Platform Export" icon="globe">
+    **Best for: Multi-platform projects**
+    
+    ```bash
+    conda env export --no-builds --from-history
+    ```
+    
+    - Works across different operating systems
+    - No platform-specific builds
+  </Card>
+  
+  <Card title="Channel-Free Export" icon="link-slash">
+    **Best for: Flexibility**
+    
+    ```bash
+    conda env export --ignore-channels --from-history
+    ```
+    
+    - No channel specifications
+    - Allows conda to choose best sources
+  </Card>
+</CardGroup>
+
+## Understanding Export Options
+
+### --from-history vs Full Export
+
+**Full export (default):**
+```yaml
+dependencies:
+  - python=3.11.0=h1234567_0
+  - numpy=1.24.0=py311h1234567_0
+  - pandas=1.5.3=py311h1234567_0
+  - pytz=2022.7.1=py311h1234567_0  # pandas dependency
+  - python-dateutil=2.8.2=pyhd8ed1ab_0  # pandas dependency
+```
+
+**With --from-history:**
+```yaml
+dependencies:
+  - python=3.11
+  - numpy
+  - pandas
+```
+
+### --no-builds Effect
+
+**With builds:**
+```yaml
+- numpy=1.24.0=py311h1234567_0
+```
+
+**Without builds:**
+```yaml
+- numpy=1.24.0
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Export contains too many packages">
+    Use `--from-history` to export only explicitly installed packages:
+    
+    ```bash
+    conda env export --from-history --file environment.yml
+    ```
+  </Accordion>
+
+  <Accordion title="Export not working across platforms">
+    Remove build strings and use history:
+    
+    ```bash
+    conda env export --from-history --no-builds --file environment.yml
+    ```
+  </Accordion>
+
+  <Accordion title="Unknown platform error">
+    Ensure you're specifying valid platforms:
+    
+    ```bash
+    conda env export --platform linux-64 --platform osx-64 --platform win-64
+    ```
+    
+    Valid platforms: linux-64, linux-aarch64, osx-64, osx-arm64, win-64
+  </Accordion>
+
+  <Accordion title="File already exists">
+    The command will silently overwrite. To be safe:
+    
+    ```bash
+    # Backup first
+    cp environment.yml environment-backup.yml
+    # Then export
+    conda env export --file environment.yml
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+1. **Version Control**: Use `--from-history --no-builds` for files in version control
+2. **Documentation**: Add comments to exported YAML files to explain special packages
+3. **Regular Updates**: Export environment specifications regularly as your project evolves
+4. **Multiple Formats**: Keep both minimal and complete exports for different purposes
+5. **Platform Specificity**: Use `--platform` when you know the target platforms
+
+## Related Commands
+
+- [`conda env create`](/commands/env-create) - Create environment from exported file
+- [`conda env update`](/commands/env-update) - Update environment from specification
+- [`conda list`](/commands/list) - List packages in environment
+- [`conda env list`](/commands/env-list) - List all environments
+- [`conda activate`](/commands/activate) - Activate environment to export

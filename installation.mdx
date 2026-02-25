@@ -1,0 +1,141 @@
+---
+title: Installation
+description: Install Conda on Windows, macOS, or Linux
+---
+
+Conda can be installed through several distributions. Choose the one that best fits your needs.
+
+## Installation Options
+
+There are three main ways to install Conda:
+
+<CardGroup cols={3}>
+  <Card title="Miniconda" icon="cube" href="https://docs.anaconda.com/free/miniconda/">
+    Minimal installer with just Conda and its dependencies
+  </Card>
+  <Card title="Miniforge" icon="code-branch" href="https://conda-forge.org/download/">
+    Community-driven minimal installer with conda-forge as default channel
+  </Card>
+  <Card title="Anaconda Distribution" icon="box" href="https://repo.anaconda.com">
+    Full distribution with hundreds of pre-installed packages
+  </Card>
+</CardGroup>
+
+## Recommended Installation Methods
+
+### Miniconda
+
+Miniconda is a minimal installer that includes only Conda and its dependencies. This is recommended if you want a lightweight installation and prefer to install only the packages you need.
+
+<Steps>
+  <Step title="Download Miniconda">
+    Visit [docs.anaconda.com/free/miniconda](https://docs.anaconda.com/free/miniconda/) and download the installer for your platform:
+    
+    - **Windows**: Download the `.exe` installer
+    - **macOS**: Download the `.pkg` or `.sh` installer
+    - **Linux**: Download the `.sh` installer
+  </Step>
+  
+  <Step title="Run the installer">
+    <CodeGroup>
+    ```bash Windows
+    # Run the .exe installer and follow the prompts
+    Miniconda3-latest-Windows-x86_64.exe
+    ```
+    
+    ```bash macOS
+    # For .pkg installer, double-click to run
+    # For .sh installer:
+    bash Miniconda3-latest-MacOSX-x86_64.sh
+    ```
+    
+    ```bash Linux
+    bash Miniconda3-latest-Linux-x86_64.sh
+    ```
+    </CodeGroup>
+  </Step>
+  
+  <Step title="Follow installation prompts">
+    Accept the license agreement and choose your installation location. The installer will set up Conda in the specified directory.
+  </Step>
+</Steps>
+
+### Miniforge
+
+Miniforge is a community-driven minimal installer that uses conda-forge as the default channel. It's ideal for users who want to use the conda-forge community packages.
+
+<Steps>
+  <Step title="Download Miniforge">
+    Visit [conda-forge.org/download](https://conda-forge.org/download/) and download the installer for your platform.
+  </Step>
+  
+  <Step title="Run the installer">
+    Follow the same installation process as Miniconda for your operating system.
+  </Step>
+</Steps>
+
+### Anaconda Distribution
+
+The Anaconda Distribution includes Conda plus hundreds of pre-installed packages commonly used for data science and machine learning. This is recommended if you want a complete, ready-to-use environment.
+
+<Steps>
+  <Step title="Download Anaconda">
+    Visit [anaconda.com/download](https://www.anaconda.com/download) and download the installer for your platform.
+  </Step>
+  
+  <Step title="Run the installer">
+    Follow the installation wizard for your operating system.
+  </Step>
+</Steps>
+
+## Verifying Your Installation
+
+After installation, verify that Conda is properly installed and accessible:
+
+<Steps>
+  <Step title="Open a new terminal">
+    Open a new terminal window or command prompt to ensure the installation path is loaded.
+  </Step>
+  
+  <Step title="Check Conda version">
+    ```bash
+    conda --version
+    ```
+    
+    This should display the installed Conda version, for example:
+    ```
+    conda 24.1.2
+    ```
+  </Step>
+  
+  <Step title="List installed packages (optional)">
+    If you installed the Anaconda Distribution, you can see all pre-installed packages:
+    
+    ```bash
+    conda list
+    ```
+  </Step>
+</Steps>
+
+## Updating Conda
+
+After installation, it's a good practice to update Conda to the newest version:
+
+```bash
+$ conda update --name base conda
+```
+
+<Note>
+  It is possible that `conda update` does not install the newest version if the existing `conda` version is far behind the current release. In this case, updating needs to be done in stages.
+  
+  For example, to update from `conda 4.12` to `conda 23.10.0`, `conda 22.11.1` needs to be installed first:
+  
+  ```bash
+  $ conda install --name base conda=22.11.1
+  $ conda update conda
+  ```
+</Note>
+
+## Next Steps
+
+Now that you have Conda installed, check out the [Quick Start guide](/quickstart) to learn the basics of using Conda.

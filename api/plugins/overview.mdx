@@ -1,0 +1,241 @@
+---
+title: Plugin System Overview
+description: Introduction to Conda's plugin system architecture and how to create plugins
+---
+
+## What is the Plugin System?
+
+Conda's plugin system allows developers to extend conda's functionality through a standardized plugin architecture. It provides a way to:
+
+- Register custom solvers
+- Add new subcommands
+- Define virtual packages
+- Hook into pre/post command execution
+- Customize authentication handlers
+- Add health checks for `conda doctor`
+- Extend transaction actions
+- Register custom settings
+- Define custom reporter backends
+- Add HTTP request headers
+
+The plugin system is built on top of [pluggy](https://pluggy.readthedocs.io/), a minimalist plugin system originally developed for pytest.
+
+## Plugin Architecture
+
+The plugin system consists of three main components:
+
+### 1. Hook Specifications (hookspecs)
+
+Defined in the `CondaSpecs` class, these are the available plugin hooks that conda provides. Each hookspec defines what kind of plugin can be registered and what it should return.
+
+See [Hook Specifications](/api/plugins/hookspecs) for all available hooks.
+
+### 2. Plugin Types
+
+These are typed return values that plugins must use when implementing hooks. Each type corresponds to a specific hook.
+
+See [Plugin Types](/api/plugins/types) for all available types.
+
+### 3. Plugin Manager
+
+The `CondaPluginManager` class manages plugin registration, loading, and execution. It extends pluggy's `PluginManager` with conda-specific functionality.
+
+## How to Create a Plugin
+
+<Steps>
+  <Step title="Import Required Modules">
+    Import the `plugins` module from conda:
+    
+    ```python
+    from conda import plugins
+    ```
+  </Step>
+
+  <Step title="Implement Your Plugin Function">
+    Create a function that implements your plugin logic. The function should yield one or more plugin type instances:
+    
+    ```python
+    def my_custom_command(args):
+        print("Hello from my custom command!")
+    ```
+  </Step>
+
+  <Step title="Decorate with @hookimpl">
+    Use the `@plugins.hookimpl` decorator and name your function according to the hook specification you're implementing:
+    
+    ```python
+    @plugins.hookimpl
+    def conda_subcommands():
+        yield plugins.types.CondaSubcommand(
+            name="my-command",
+            summary="My custom command",
+            action=my_custom_command,
+        )
+    ```
+  </Step>
+
+  <Step title="Register Your Plugin">
+    Register your plugin via entry points in your package's `setup.py` or `pyproject.toml`:
+    
+    **setup.py:**
+    ```python
+    setup(
+        name="my-conda-plugin",
+        entry_points={
+            "conda": [
+                "my-plugin = my_package.my_module"
+            ]
+        }
+    )
+    ```
+    
+    **pyproject.toml:**
+    ```toml
+    [project.entry-points.conda]
+    my-plugin = "my_package.my_module"
+    ```
+  </Step>
+</Steps>
+
+## Complete Example
+
+Here's a complete example of a plugin that adds a custom subcommand:
+
+```python my_conda_plugin/plugin.py
+from conda import plugins
+
+
+def hello_command(args):
+    """A simple hello world command."""
+    print(f"Hello from conda plugin!")
+    print(f"Args: {args}")
+    return 0
+
+
+@plugins.hookimpl
+def conda_subcommands():
+    yield plugins.types.CondaSubcommand(
+        name="hello",
+        summary="Print a hello message",
+        action=hello_command,
+    )
+```
+
+```python setup.py
+from setuptools import setup
+
+setup(
+    name="my-conda-plugin",
+    version="0.1.0",
+    packages=["my_conda_plugin"],
+    entry_points={
+        "conda": [
+            "hello = my_conda_plugin.plugin"
+        ]
+    },
+)
+```
+
+After installing this package, you can run:
+
+```bash
+conda hello
+```
+
+## Plugin Entry Points
+
+### Entry Point Group
+
+All conda plugins must be registered under the `"conda"` entry point group.
+
+### Loading Mechanism
+
+Plugins are loaded during conda's startup process through the `get_plugin_manager()` function:
+
+1. **Built-in plugins**: Conda's internal plugins are loaded first
+2. **Entry point plugins**: External plugins registered via setuptools entry points are discovered and loaded
+3. **Plugin validation**: Plugin names are validated and conflicts are detected
+
+<Note>
+  Plugin names must be lowercase and stripped of whitespace. The plugin system will automatically normalize names.
+</Note>
+
+## Plugin Manager API
+
+The `CondaPluginManager` class provides methods for interacting with registered plugins:
+
+### Key Methods
+
+| Method | Description |
+|--------|-------------|
+| `register(plugin, name)` | Register a plugin manually |
+| `load_plugins(*plugins)` | Load multiple plugins at once |
+| `load_entrypoints(group, name)` | Load plugins from setuptools entry points |
+| `get_hook_results(name, **kwargs)` | Get all results from a specific hook |
+| `disable_external_plugins()` | Disable all non-built-in plugins |
+
+### Example: Getting Registered Solvers
+
+```python
+from conda.plugins.manager import get_plugin_manager
+
+plugin_manager = get_plugin_manager()
+solvers = plugin_manager.get_solvers()
+print(f"Available solvers: {list(solvers.keys())}")
+```
+
+## Built-in Plugin Modules
+
+Conda includes several built-in plugin implementations:
+
+- **`conda.plugins.solvers`**: Classic solver implementation
+- **`conda.plugins.subcommands.doctor`**: `conda doctor` and `conda check` subcommands
+- **`conda.plugins.virtual_packages`**: Virtual package registration
+- **`conda.plugins.post_solves`**: Post-solve hooks
+- **`conda.plugins.reporter_backends`**: Reporter backend implementations
+- **`conda.plugins.package_extractors`**: Package extraction handlers
+- **`conda.plugins.prefix_data_loaders`**: Prefix data loaders
+- **`conda.plugins.environment_specifiers`**: Environment specification parsers
+- **`conda.plugins.environment_exporters`**: Environment exporters
+
+## Error Handling
+
+<Warning>
+  The plugin system includes error handling to gracefully handle plugin failures:
+  
+  - Invalid plugin names raise `PluginError`
+  - Plugin name conflicts raise `PluginError` with details about conflicting plugins
+  - Failed plugin loads are logged as warnings but don't stop conda from starting
+</Warning>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Typed Returns" icon="check">
+    Always use the appropriate plugin type from `conda.plugins.types` for your hook implementation.
+  </Card>
+  
+  <Card title="Lowercase Names" icon="check">
+    Plugin names should be lowercase with hyphens for separation (e.g., `my-custom-plugin`).
+  </Card>
+  
+  <Card title="Handle Errors Gracefully" icon="shield-check">
+    Your plugin should handle errors without crashing conda.
+  </Card>
+  
+  <Card title="Document Your Plugin" icon="book">
+    Provide clear documentation about what your plugin does and how to use it.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Hook Specifications" icon="hook" href="/api/plugins/hookspecs">
+    Learn about all available plugin hooks
+  </Card>
+  
+  <Card title="Plugin Types" icon="shapes" href="/api/plugins/types">
+    Explore all plugin type definitions
+  </Card>
+</CardGroup>

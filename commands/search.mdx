@@ -1,0 +1,268 @@
+---
+title: conda search
+description: Search for packages using the MatchSpec format
+---
+
+## Overview
+
+The `conda search` command queries channels for packages matching the provided package specification. It uses the MatchSpec query language to find packages across configured channels or within local environments.
+
+## Syntax
+
+```bash
+conda search [options] [match_spec]
+```
+
+## Search Specifications
+
+<ParamField path="match_spec" type="string">
+  Package specification to search for. Supports MatchSpec format including wildcards, version constraints, and channel specifications. Defaults to `*` (all packages) if not specified.
+</ParamField>
+
+## Search Mode
+
+<ParamField path="--envs" type="boolean">
+  Search all of the current user's environments. If run as Administrator (on Windows) or UID 0 (on unix), search all known environments on the system.
+</ParamField>
+
+## Output Options
+
+<ParamField path="-i, --info" type="boolean">
+  Provide detailed information about each package.
+</ParamField>
+
+<ParamField path="--subdir, --platform" type="string">
+  Search the given subdir. Should be formatted like `osx-64`, `linux-32`, `win-64`, and so on. The default is to search the current platform.
+</ParamField>
+
+<ParamField path="--skip-flexible-search" type="boolean">
+  Do not perform flexible search if initial search fails.
+</ParamField>
+
+## Channel Customization
+
+<ParamField path="-c, --channel" type="string">
+  Additional channel to search for packages. These are URLs searched in the order they are given (including local directories using the `file://` syntax or simply a path like `/home/conda/mychan` or `../mychan`). Can be used multiple times.
+</ParamField>
+
+<ParamField path="--use-local" type="boolean">
+  Use locally built packages. Identical to `-c local`.
+</ParamField>
+
+<ParamField path="-O, --override-channels" type="boolean">
+  Do not search default or .condarc channels. Requires --channel.
+</ParamField>
+
+<ParamField path="--repodata-fn" type="string">
+  Specify file name of repodata on the remote server. Can be passed multiple times.
+</ParamField>
+
+<ParamField path="--experimental" type="string">
+  Enable experimental features. Options: `jlap` (download incremental package index data), `lock` (use locking when reading/updating index cache).
+</ParamField>
+
+<ParamField path="--no-lock" type="boolean">
+  Disable locking when reading, updating index (repodata.json) cache.
+</ParamField>
+
+<ParamField path="--repodata-use-zst / --no-repodata-use-zst" type="boolean">
+  Check for/do not check for repodata.json.zst. Enabled by default.
+</ParamField>
+
+## Networking Options
+
+<ParamField path="-C, --use-index-cache" type="boolean">
+  Use cache of channel index files, even if it has expired. This is useful if you don't want conda to check whether a new version of the repodata file exists.
+</ParamField>
+
+<ParamField path="-k, --insecure" type="boolean">
+  Allow conda to perform "insecure" SSL connections and transfers. Equivalent to setting `ssl_verify` to `false`.
+</ParamField>
+
+<ParamField path="--offline" type="boolean">
+  Offline mode. Don't connect to the Internet.
+</ParamField>
+
+## Output Format Options
+
+<ParamField path="--json" type="boolean">
+  Report all output as json. Suitable for using conda programmatically.
+</ParamField>
+
+<ParamField path="-v, --verbose" type="boolean">
+  Can be used multiple times. Once for detailed output, twice for INFO logging, thrice for DEBUG logging, four times for TRACE logging.
+</ParamField>
+
+<ParamField path="-q, --quiet" type="boolean">
+  Do not display progress bar.
+</ParamField>
+
+## Examples
+
+<CodeGroup>
+```bash Search for specific package
+conda search scikit-learn
+```
+
+```bash Search with wildcard
+conda search '*scikit*'
+```
+
+```bash Search for specific version
+conda search 'numpy>=1.12'
+```
+
+```bash Search on specific channel
+conda search conda-forge::numpy
+```
+
+```bash Search with channel syntax
+conda search 'numpy[channel=conda-forge, subdir=osx-64]'
+```
+
+```bash Search for 64-bit Linux packages
+conda search numpy[subdir=linux-64]
+```
+
+```bash Search with detailed info
+conda search -i tensorflow
+```
+
+```bash Search in environments
+conda search --envs numpy
+```
+
+```bash Search specific platform
+conda search --subdir osx-64 pytorch
+```
+
+```bash Search in JSON format
+conda search --json pandas
+```
+</CodeGroup>
+
+## Common Use Cases
+
+### Basic Package Search
+
+Search for a package by name:
+
+```bash
+conda search scikit-learn
+```
+
+### Wildcard Searches
+
+Find packages matching a pattern:
+
+```bash
+conda search '*scikit*'
+```
+
+Note: Quote wildcards to prevent shell expansion:
+
+```bash
+conda search "*scikit"
+conda search "*scikit*"
+```
+
+### Version-Specific Search
+
+Find specific versions of a package:
+
+```bash
+conda search 'numpy>=1.12'
+conda search 'python=3.11'
+conda search 'pandas>=1.0,<2.0'
+```
+
+### Channel-Specific Search
+
+Search in a specific channel:
+
+```bash
+conda search -c conda-forge tensorflow
+```
+
+Or using MatchSpec syntax:
+
+```bash
+conda search conda-forge::numpy
+conda search 'numpy[channel=conda-forge]'
+```
+
+### Platform-Specific Search
+
+Search for packages built for a specific platform:
+
+```bash
+conda search numpy[subdir=linux-64]
+conda search --subdir osx-64 pytorch
+```
+
+### Detailed Package Information
+
+Get comprehensive information about available packages:
+
+```bash
+conda search -i scikit-learn
+```
+
+This shows:
+- File name
+- Version
+- Build string and number
+- Size
+- License
+- Subdir
+- URL
+- Dependencies
+- Constraints
+
+### Searching Installed Environments
+
+Find where a package is installed:
+
+```bash
+conda search --envs numpy
+```
+
+This searches all environments instead of channels.
+
+### Multi-Channel Search
+
+Search across multiple channels:
+
+```bash
+conda search -c conda-forge -c bioconda biopython
+```
+
+### Offline Search
+
+Search using cached channel data:
+
+```bash
+conda search --offline numpy
+```
+
+### Machine-Readable Output
+
+Get JSON output for programmatic use:
+
+```bash
+conda search --json pandas > results.json
+```
+
+<Note>
+  Your shell may expand `*` before passing the command to conda. Use single or double quotes around search patterns containing wildcards: `'*scikit*'` or `"*scikit*"`.
+</Note>
+
+<Info>
+  If conda doesn't find an exact match, it automatically performs a flexible search with wildcards unless you use `--skip-flexible-search`.
+</Info>
+
+<Tip>
+  Use the MatchSpec format for precise searches:
+  - `package[version=">=1.0", subdir=linux-64, channel=conda-forge]`
+  - Supports: name, version, build, channel, subdir, and more
+</Tip>

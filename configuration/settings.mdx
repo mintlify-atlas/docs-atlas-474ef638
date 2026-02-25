@@ -1,0 +1,642 @@
+---
+title: Configuration Settings Reference
+description: Complete reference of all conda configuration settings, parameters, and options
+---
+
+## Overview
+
+This page provides a comprehensive reference for all configuration settings available in conda. Settings can be specified in:
+
+- `.condarc` files (YAML format)
+- Environment variables (prefixed with `CONDA_`)
+- Command-line arguments
+
+Use `conda config --describe` to see descriptions of all settings, or `conda config --describe <parameter>` for a specific setting.
+
+## Channel Configuration
+
+Settings that control where conda searches for packages.
+
+<ParamField path="channels" type="list" default="['defaults']">
+  The list of conda channels to search for packages. Channels earlier in the list have higher priority.
+  
+  ```yaml
+  channels:
+    - conda-forge
+    - bioconda
+    - defaults
+  ```
+  
+  **Environment variable:** `CONDA_CHANNELS` (comma-separated)
+</ParamField>
+
+<ParamField path="channel_alias" type="string" default="https://conda.anaconda.org">
+  Base URL prepended to channel names that don't include a full URL. Used to resolve simple channel names.
+  
+  ```yaml
+  channel_alias: https://repo.company.com/conda
+  ```
+  
+  **Environment variable:** `CONDA_CHANNEL_ALIAS`
+</ParamField>
+
+<ParamField path="channel_priority" type="string" default="flexible">
+  Determines how strictly conda respects channel priority during dependency resolution.
+  
+  - `strict`: Only consider packages from the highest-priority channel that contains any version of a package
+  - `flexible`: Prefer higher-priority channels but allow lower-priority channels to satisfy dependencies
+  - `disabled`: Ignore channel priority entirely; choose packages based solely on version
+  
+  ```yaml
+  channel_priority: strict
+  ```
+  
+  **Environment variable:** `CONDA_CHANNEL_PRIORITY`
+</ParamField>
+
+<ParamField path="default_channels" type="list">
+  The list of channel URLs used for the 'defaults' multichannel.
+  
+  ```yaml
+  default_channels:
+    - https://repo.anaconda.com/pkgs/main
+    - https://repo.anaconda.com/pkgs/r
+  ```
+  
+  **Environment variable:** `CONDA_DEFAULT_CHANNELS`
+</ParamField>
+
+<ParamField path="custom_channels" type="map">
+  A mapping of channel names to URLs. Overrides the default `channel_alias` for specific channels.
+  
+  ```yaml
+  custom_channels:
+    local: file:///opt/conda/packages
+    internal: https://repo.company.com/conda
+  ```
+  
+  **Environment variable:** Not supported
+</ParamField>
+
+<ParamField path="custom_multichannels" type="map">
+  Define custom multichannels (groups of channels referenced by a single name).
+  
+  ```yaml
+  custom_multichannels:
+    science:
+      - conda-forge
+      - bioconda
+  ```
+  
+  **Environment variable:** Not supported
+</ParamField>
+
+<ParamField path="override_channels_enabled" type="boolean" default="true">
+  Allow use of the `--override-channels` CLI flag to ignore configured channels.
+  
+  ```yaml
+  override_channels_enabled: false
+  ```
+</ParamField>
+
+<ParamField path="allowlist_channels" type="list">
+  Only allow packages from these channels. If specified, channels not in this list are ignored.
+  
+  ```yaml
+  allowlist_channels:
+    - conda-forge
+    - defaults
+  ```
+  
+  **Environment variable:** `CONDA_ALLOWLIST_CHANNELS`
+</ParamField>
+
+<ParamField path="denylist_channels" type="list">
+  Never use packages from these channels.
+  
+  ```yaml
+  denylist_channels:
+    - untrusted-channel
+  ```
+  
+  **Environment variable:** `CONDA_DENYLIST_CHANNELS`
+</ParamField>
+
+## Directory Configuration
+
+Settings for environment and package storage locations.
+
+<ParamField path="envs_dirs" type="list">
+  Directories to search for named environments. When creating a new environment, it will be placed in the first writable directory.
+  
+  ```yaml
+  envs_dirs:
+    - ~/my-envs
+    - ~/.conda/envs
+  ```
+  
+  **Default:** `[$CONDA_ROOT/envs, ~/.conda/envs]`
+  
+  **Environment variable:** `CONDA_ENVS_DIRS` (path separator-delimited)
+</ParamField>
+
+<ParamField path="pkgs_dirs" type="list">
+  Directories for package caches. Downloaded packages are extracted into the first writable directory.
+  
+  ```yaml
+  pkgs_dirs:
+    - /scratch/conda-pkgs
+    - ~/.conda/pkgs
+  ```
+  
+  **Default:** `[$CONDA_ROOT/pkgs, ~/.conda/pkgs]`
+  
+  **Environment variable:** `CONDA_PKGS_DIRS` (path separator-delimited)
+</ParamField>
+
+## Solver Configuration
+
+Settings that control dependency resolution and package updates.
+
+<ParamField path="solver" type="string" default="classic">
+  The solver backend to use for dependency resolution.
+  
+  - `classic`: Original conda solver
+  - `libmamba`: Faster solver using libmamba (recommended)
+  
+  ```yaml
+  solver: libmamba
+  ```
+  
+  **Environment variable:** `CONDA_SOLVER`
+</ParamField>
+
+<ParamField path="aggressive_update_packages" type="list">
+  Packages that are always updated to the latest version when they are part of an install/update operation.
+  
+  ```yaml
+  aggressive_update_packages:
+    - ca-certificates
+    - certifi
+    - openssl
+  ```
+  
+  **Environment variable:** `CONDA_AGGRESSIVE_UPDATE_PACKAGES`
+</ParamField>
+
+<ParamField path="auto_update_conda" type="boolean" default="true">
+  Automatically update conda when a newer version is available.
+  
+  ```yaml
+  auto_update_conda: false
+  ```
+  
+  **Environment variable:** `CONDA_AUTO_UPDATE_CONDA`
+</ParamField>
+
+<ParamField path="pinned_packages" type="list">
+  Package specifications to pin in every environment. These packages will be held at specified versions.
+  
+  ```yaml
+  pinned_packages:
+    - python=3.11
+    - numpy<2.0
+  ```
+  
+  **Environment variable:** `CONDA_PINNED_PACKAGES` (ampersand-separated)
+</ParamField>
+
+<ParamField path="disallowed_packages" type="list">
+  Package specifications that are not allowed to be installed.
+  
+  ```yaml
+  disallowed_packages:
+    - tensorflow<2.0
+    - python=2.7
+  ```
+  
+  **Environment variable:** `CONDA_DISALLOWED_PACKAGES` (ampersand-separated)
+</ParamField>
+
+<ParamField path="create_default_packages" type="list">
+  Packages that are automatically added to newly created environments.
+  
+  ```yaml
+  create_default_packages:
+    - pip
+    - ipython
+    - jupyter
+  ```
+  
+  **Environment variable:** `CONDA_CREATE_DEFAULT_PACKAGES`
+</ParamField>
+
+## Network Configuration
+
+Settings for internet connectivity and remote repositories.
+
+<ParamField path="ssl_verify" type="boolean | string" default="true">
+  SSL certificate verification setting. Can be:
+  - `true`: Verify certificates using system CA bundle
+  - `false`: Disable verification (not recommended)
+  - Path to CA bundle file
+  - Path to directory containing CA certificates
+  - `'truststore'`: Use OS certificate store (Python 3.10+)
+  
+  ```yaml
+  ssl_verify: /etc/ssl/certs/ca-bundle.crt
+  ```
+  
+  **Environment variable:** `CONDA_SSL_VERIFY`
+</ParamField>
+
+<ParamField path="client_ssl_cert" type="string">
+  Path to a client SSL certificate file (or combined cert/key PEM file).
+  
+  ```yaml
+  client_ssl_cert: ~/.conda/client-cert.pem
+  ```
+  
+  **Environment variable:** `CONDA_CLIENT_SSL_CERT`
+</ParamField>
+
+<ParamField path="client_ssl_cert_key" type="string">
+  Path to a client SSL certificate key file (when cert and key are separate).
+  
+  ```yaml
+  client_ssl_cert_key: ~/.conda/client-key.pem
+  ```
+  
+  **Environment variable:** `CONDA_CLIENT_SSL_CERT_KEY`
+</ParamField>
+
+<ParamField path="proxy_servers" type="map">
+  HTTP/HTTPS proxy server configuration.
+  
+  ```yaml
+  proxy_servers:
+    http: http://user:pass@proxy.example.com:8080
+    https: https://user:pass@proxy.example.com:8080
+  ```
+  
+  **Environment variables:** `HTTP_PROXY`, `HTTPS_PROXY`
+</ParamField>
+
+<ParamField path="remote_connect_timeout_secs" type="float" default="9.15">
+  Seconds to wait for connection to remote servers.
+  
+  ```yaml
+  remote_connect_timeout_secs: 30.0
+  ```
+</ParamField>
+
+<ParamField path="remote_read_timeout_secs" type="float" default="60.0">
+  Seconds to wait for server response after connection.
+  
+  ```yaml
+  remote_read_timeout_secs: 120.0
+  ```
+</ParamField>
+
+<ParamField path="remote_max_retries" type="integer" default="3">
+  Maximum number of HTTP request retries.
+  
+  ```yaml
+  remote_max_retries: 5
+  ```
+</ParamField>
+
+<ParamField path="remote_backoff_factor" type="integer" default="1">
+  Backoff factor for retry delays.
+  
+  ```yaml
+  remote_backoff_factor: 2
+  ```
+</ParamField>
+
+<ParamField path="offline" type="boolean" default="false">
+  Restrict conda to cached content and file:// URLs only.
+  
+  ```yaml
+  offline: true
+  ```
+  
+  **Environment variable:** `CONDA_OFFLINE`
+</ParamField>
+
+<ParamField path="local_repodata_ttl" type="boolean | integer" default="1">
+  How long to cache repodata locally (in seconds).
+  - `false` or `0`: Always fetch fresh repodata
+  - `true` or `1`: Respect HTTP Cache-Control headers
+  - Other positive integer: Cache for this many seconds
+  
+  ```yaml
+  local_repodata_ttl: 3600  # 1 hour
+  ```
+</ParamField>
+
+## Package Linking Configuration
+
+Settings for how packages are installed into environments.
+
+<ParamField path="always_copy" type="boolean" default="false">
+  Always copy files instead of using hard-links during installation.
+  
+  ```yaml
+  always_copy: true
+  ```
+  
+  **Environment variable:** `CONDA_ALWAYS_COPY`
+</ParamField>
+
+<ParamField path="always_softlink" type="boolean" default="false">
+  Always use soft-links (symlinks) instead of hard-links. **Warning:** This can cause environment corruption.
+  
+  ```yaml
+  always_softlink: false
+  ```
+  
+  **Environment variable:** `CONDA_ALWAYS_SOFTLINK`
+</ParamField>
+
+<ParamField path="allow_softlinks" type="boolean" default="false">
+  Allow conda to use soft-links when hard-links aren't possible (e.g., across filesystems).
+  
+  ```yaml
+  allow_softlinks: true
+  ```
+</ParamField>
+
+<ParamField path="path_conflict" type="string" default="clobber">
+  How to handle conflicting/overlapping file paths during installation.
+  - `clobber`: Overwrite files from other packages
+  - `warn`: Warn about conflicts but proceed
+  - `prevent`: Fail installation if conflicts exist
+  
+  ```yaml
+  path_conflict: warn
+  ```
+</ParamField>
+
+<ParamField path="rollback_enabled" type="boolean" default="true">
+  Revert changes if an error occurs during package installation.
+  
+  ```yaml
+  rollback_enabled: true
+  ```
+</ParamField>
+
+<ParamField path="safety_checks" type="string" default="warn">
+  Level of safety checks during installation.
+  - `enabled`: Run all safety checks, fail on errors
+  - `warn`: Run checks, warn on errors but continue
+  - `disabled`: Skip safety checks
+  
+  ```yaml
+  safety_checks: enabled
+  ```
+</ParamField>
+
+<ParamField path="extra_safety_checks" type="boolean" default="false">
+  Perform additional safety checks (SHA-256 verification of all files).
+  
+  ```yaml
+  extra_safety_checks: true
+  ```
+</ParamField>
+
+<ParamField path="shortcuts" type="boolean" default="true">
+  Allow packages to create OS-specific shortcuts (e.g., Windows Start Menu entries).
+  
+  ```yaml
+  shortcuts: true
+  ```
+</ParamField>
+
+## User Interface Configuration
+
+Settings that control conda's output and interaction.
+
+<ParamField path="always_yes" type="boolean" default="false">
+  Automatically answer 'yes' to all prompts.
+  
+  ```yaml
+  always_yes: true
+  ```
+  
+  **Environment variable:** `CONDA_ALWAYS_YES`
+</ParamField>
+
+<ParamField path="quiet" type="boolean" default="false">
+  Disable progress bars and minimize output.
+  
+  ```yaml
+  quiet: true
+  ```
+  
+  **Environment variable:** `CONDA_QUIET`
+</ParamField>
+
+<ParamField path="json" type="boolean" default="false">
+  Output all results in JSON format.
+  
+  ```yaml
+  json: false
+  ```
+  
+  **Environment variable:** `CONDA_JSON`
+</ParamField>
+
+<ParamField path="verbosity" type="integer" default="0">
+  Output verbosity level (0-4). Higher numbers produce more detailed output.
+  - `0`: Standard output
+  - `1`: Detailed output
+  - `2`: Info-level logging
+  - `3`: Debug-level logging
+  - `4`: Trace-level logging
+  
+  ```yaml
+  verbosity: 2
+  ```
+  
+  **Environment variable:** `CONDA_VERBOSITY`
+</ParamField>
+
+<ParamField path="show_channel_urls" type="boolean">
+  Show channel URLs when displaying packages.
+  
+  ```yaml
+  show_channel_urls: true
+  ```
+</ParamField>
+
+<ParamField path="auto_activate" type="boolean" default="true">
+  Automatically activate the base environment (or configured default environment) during shell initialization.
+  
+  ```yaml
+  auto_activate: true
+  ```
+  
+  **Environment variable:** `CONDA_AUTO_ACTIVATE`
+</ParamField>
+
+<ParamField path="changeps1" type="boolean" default="true">
+  Modify the shell prompt to show the active environment name.
+  
+  ```yaml
+  changeps1: true
+  ```
+  
+  **Environment variable:** `CONDA_CHANGEPS1`
+</ParamField>
+
+<ParamField path="env_prompt" type="string" default="({default_env}) ">
+  Template for the environment name in the shell prompt. Supports `{prefix}`, `{name}`, and `{default_env}` variables.
+  
+  ```yaml
+  env_prompt: '[{name}] '
+  ```
+  
+  **Environment variable:** `CONDA_ENV_PROMPT`
+</ParamField>
+
+## Performance Configuration
+
+Settings to optimize conda's performance.
+
+<ParamField path="default_threads" type="integer">
+  Default number of threads for parallel operations. If not set, conda chooses automatically.
+  
+  ```yaml
+  default_threads: 4
+  ```
+  
+  **Environment variable:** `CONDA_DEFAULT_THREADS`
+</ParamField>
+
+<ParamField path="repodata_threads" type="integer">
+  Threads for downloading and reading repodata. Defaults to `default_threads` if not set.
+  
+  ```yaml
+  repodata_threads: 8
+  ```
+  
+  **Environment variable:** `CONDA_REPODATA_THREADS`
+</ParamField>
+
+<ParamField path="fetch_threads" type="integer" default="5">
+  Threads for downloading packages. Defaults to 5 if neither this nor `default_threads` is set.
+  
+  ```yaml
+  fetch_threads: 10
+  ```
+  
+  **Environment variable:** `CONDA_FETCH_THREADS`
+</ParamField>
+
+<ParamField path="verify_threads" type="integer" default="1">
+  Threads for verifying package integrity. Defaults to 1 if neither this nor `default_threads` is set.
+  
+  ```yaml
+  verify_threads: 2
+  ```
+</ParamField>
+
+<ParamField path="execute_threads" type="integer" default="1">
+  Threads for executing link/unlink operations. Defaults to 1 if neither this nor `default_threads` is set.
+  
+  ```yaml
+  execute_threads: 2
+  ```
+</ParamField>
+
+<ParamField path="use_index_cache" type="boolean" default="false">
+  Use cached index data instead of fetching fresh data.
+  
+  ```yaml
+  use_index_cache: true
+  ```
+</ParamField>
+
+## Advanced Settings
+
+<ParamField path="subdir" type="string">
+  Override the platform/architecture (e.g., `linux-64`, `osx-arm64`, `win-64`). Useful for cross-platform package creation.
+  
+  ```yaml
+  subdir: linux-64
+  ```
+  
+  **Environment variable:** `CONDA_SUBDIR`
+</ParamField>
+
+<ParamField path="subdirs" type="list">
+  Additional subdirs to consider during package resolution.
+  
+  ```yaml
+  subdirs:
+    - linux-64
+    - noarch
+  ```
+</ParamField>
+
+<ParamField path="no_plugins" type="boolean" default="false">
+  Disable all plugins except built-in conda plugins.
+  
+  ```yaml
+  no_plugins: false
+  ```
+  
+  **Environment variable:** `CONDA_NO_PLUGINS`
+</ParamField>
+
+<ParamField path="no_lock" type="boolean" default="false">
+  Disable file locking. **Warning:** Can cause race conditions.
+  
+  ```yaml
+  no_lock: false
+  ```
+  
+  **Environment variable:** `CONDA_NO_LOCK`
+</ParamField>
+
+<ParamField path="repodata_fns" type="list" default="['current_repodata.json', 'repodata.json']">
+  List of repodata filenames to try, in order.
+  
+  ```yaml
+  repodata_fns:
+    - repodata.json
+  ```
+</ParamField>
+
+<ParamField path="prefix_data_interoperability" type="boolean" default="false">
+  Enable plugins to interact with non-conda-installed packages (e.g., pip packages).
+  
+  ```yaml
+  prefix_data_interoperability: true
+  ```
+</ParamField>
+
+## Viewing Settings
+
+To explore all available settings and their current values:
+
+```bash
+# Show all active configuration
+conda config --show
+
+# Show configuration sources
+conda config --show-sources
+
+# Get description of all settings
+conda config --describe
+
+# Get description of specific setting
+conda config --describe channel_priority
+```
+
+## See Also
+
+- [.condarc Configuration](/configuration/condarc) - How to use .condarc files
+- [Environment Variables](/configuration/environment-variables) - Configure via environment variables
+- [conda config](/commands/config) - CLI reference for managing settings

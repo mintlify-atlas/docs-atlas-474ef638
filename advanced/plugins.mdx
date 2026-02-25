@@ -1,0 +1,798 @@
+---
+title: Plugin Development
+description: Extend conda with custom plugins for solvers, subcommands, virtual packages, and more
+---
+
+Conda's plugin system allows you to extend its functionality by creating custom plugins. Plugins are registered using the `pluggy` framework and can add new capabilities to conda.
+
+## Plugin System Overview
+
+<Info>
+Plugins are defined using **hook specifications** (hookspecs) and implemented using **hook implementations** (hookimpls).
+</Info>
+
+From `conda/plugins/hookspec.py:55`:
+
+```python
+hookimpl = pluggy.HookimplMarker("conda")
+"""Decorator to mark plugin hook implementations, used to register plugins."""
+```
+
+### Available Plugin Types
+
+<CardGroup cols={2}>
+  <Card title="Solvers" icon="puzzle-piece">
+    Custom dependency solvers
+  </Card>
+  
+  <Card title="Subcommands" icon="terminal">
+    Add new CLI commands
+  </Card>
+  
+  <Card title="Virtual Packages" icon="cube">
+    Define system virtual packages
+  </Card>
+  
+  <Card title="Pre/Post Commands" icon="clock">
+    Hook into command execution
+  </Card>
+  
+  <Card title="Auth Handlers" icon="key">
+    Custom authentication methods
+  </Card>
+  
+  <Card title="Health Checks" icon="heart-pulse">
+    Diagnostic checks for conda doctor
+  </Card>
+  
+  <Card title="Transaction Actions" icon="list-check">
+    Custom package transaction steps
+  </Card>
+  
+  <Card title="Settings" icon="sliders">
+    Register new configuration options
+  </Card>
+  
+  <Card title="Reporter Backends" icon="display">
+    Custom output formatters
+  </Card>
+  
+  <Card title="Request Headers" icon="heading">
+    Add HTTP headers to requests
+  </Card>
+  
+  <Card title="Environment Specs" icon="file-code">
+    Parse custom env file formats
+  </Card>
+  
+  <Card title="Package Extractors" icon="file-zipper">
+    Handle custom package formats
+  </Card>
+</CardGroup>
+
+## Creating a Plugin
+
+### 1. Subcommand Plugin
+
+Add a custom command to conda.
+
+From `conda/plugins/hookspec.py:97`:
+
+```python
+@_hookspec
+def conda_subcommands(self) -> Iterable[CondaSubcommand]:
+    """
+    Register external subcommands in conda.
+    
+    :return: An iterable of subcommand entries.
+    """
+```
+
+<Steps>
+  <Step title="Create the Plugin File">
+    ```python my_conda_plugin.py
+    from conda import plugins
+    
+    def example_command(args):
+        """Implementation of your subcommand."""
+        print("This is an example command!")
+        print(f"Arguments: {args}")
+    
+    @plugins.hookimpl
+    def conda_subcommands():
+        yield plugins.types.CondaSubcommand(
+            name="example",
+            summary="Example subcommand",
+            action=example_command,
+        )
+    ```
+  </Step>
+  
+  <Step title="Install the Plugin">
+    Create a `setup.py` or `pyproject.toml`:
+    
+    ```toml pyproject.toml
+    [project]
+    name = "my-conda-plugin"
+    version = "0.1.0"
+    
+    [project.entry-points.conda]
+    my-plugin = "my_conda_plugin"
+    ```
+    
+    Then install:
+    ```bash
+    pip install -e .
+    ```
+  </Step>
+  
+  <Step title="Use the Plugin">
+    ```bash
+    conda example
+    # Output: This is an example command!
+    ```
+  </Step>
+</Steps>
+
+### 2. Solver Plugin
+
+Create a custom dependency solver.
+
+From `conda/plugins/hookspec.py:63`:
+
+```python
+@_hookspec
+def conda_solvers(self) -> Iterable[CondaSolver]:
+    """
+    Register solvers in conda.
+    
+    :return: An iterable of solver entries.
+    """
+```
+
+<CodeGroup>
+```python Plugin Implementation
+import logging
+from conda import plugins
+from conda.core import solve
+
+log = logging.getLogger(__name__)
+
+class VerboseSolver(solve.Solver):
+    """A solver that logs detailed information."""
+    
+    def solve_final_state(self, *args, **kwargs):
+        log.info("Starting verbose solver!")
+        log.info(f"Solving with args: {args}")
+        result = super().solve_final_state(*args, **kwargs)
+        log.info(f"Solved {len(result)} packages")
+        return result
+
+@plugins.hookimpl
+def conda_solvers():
+    yield plugins.types.CondaSolver(
+        name="verbose-classic",
+        backend=VerboseSolver,
+    )
+```
+
+```bash Usage
+# Use your custom solver
+conda install numpy --solver verbose-classic
+
+# Or set it as default
+conda config --set solver verbose-classic
+```
+</CodeGroup>
+
+### 3. Virtual Package Plugin
+
+Define system capabilities as virtual packages.
+
+From `conda/plugins/hookspec.py:125`:
+
+```python
+@_hookspec
+def conda_virtual_packages(self) -> Iterable[CondaVirtualPackage]:
+    """
+    Register virtual packages in Conda.
+    
+    :return: An iterable of virtual package entries.
+    """
+```
+
+<Tabs>
+  <Tab title="Static Values">
+    ```python
+    from conda import plugins
+    
+    @plugins.hookimpl
+    def conda_virtual_packages():
+        yield plugins.types.CondaVirtualPackage(
+            name="my_custom_os",
+            version="1.2.3",
+            build="x86_64",
+        )
+    ```
+  </Tab>
+  
+  <Tab title="Dynamic Values">
+    ```python
+    import platform
+    from conda import plugins
+    
+    def get_os_version():
+        """Dynamically detect OS version."""
+        return platform.release()
+    
+    @plugins.hookimpl
+    def conda_virtual_packages():
+        yield plugins.types.CondaVirtualPackage(
+            name="custom_kernel",
+            version=get_os_version,  # Callable
+            build=platform.machine,   # Callable
+        )
+    ```
+  </Tab>
+  
+  <Tab title="With Override">
+    ```python
+    from conda import plugins
+    
+    @plugins.hookimpl
+    def conda_virtual_packages():
+        yield plugins.types.CondaVirtualPackage(
+            name="cuda",
+            version="12.0",
+            build="0",
+            override_entity="version",  # Allow CONDA_OVERRIDE_CUDA
+        )
+    ```
+    
+    Users can override:
+    ```bash
+    export CONDA_OVERRIDE_CUDA=11.8
+    ```
+  </Tab>
+</Tabs>
+
+### 4. Pre/Post Command Hooks
+
+Execute code before or after conda commands.
+
+From `conda/plugins/hookspec.py:149`:
+
+```python
+@_hookspec
+def conda_pre_commands(self) -> Iterable[CondaPreCommand]:
+    """Register pre-command functions in conda."""
+
+@_hookspec
+def conda_post_commands(self) -> Iterable[CondaPostCommand]:
+    """Register post-command functions in conda."""
+```
+
+<CodeGroup>
+```python Pre-Command Hook
+from conda import plugins
+import logging
+
+log = logging.getLogger(__name__)
+
+def log_install_start(command):
+    """Log when install operations begin."""
+    log.info(f"Starting {command} operation")
+    log.info("Validating environment...")
+
+@plugins.hookimpl
+def conda_pre_commands():
+    yield plugins.types.CondaPreCommand(
+        name="example-pre-command",
+        action=log_install_start,
+        run_for={"install", "create"},  # Only run for these commands
+    )
+```
+
+```python Post-Command Hook
+from conda import plugins
+
+def cleanup_after_install(command):
+    """Cleanup after installation."""
+    print(f"Cleaning up after {command}...")
+    # Perform cleanup operations
+
+@plugins.hookimpl
+def conda_post_commands():
+    yield plugins.types.CondaPostCommand(
+        name="example-post-command",
+        action=cleanup_after_install,
+        run_for={"install", "update"},
+    )
+```
+</CodeGroup>
+
+### 5. Authentication Handler
+
+Custom authentication for channel access.
+
+From `conda/plugins/hookspec.py:201`:
+
+```python
+@_hookspec
+def conda_auth_handlers(self) -> Iterable[CondaAuthHandler]:
+    """
+    Register a conda auth handler derived from the requests API.
+    """
+```
+
+```python
+import os
+from conda import plugins
+from requests.auth import AuthBase
+
+class EnvironmentHeaderAuth(AuthBase):
+    """Add authentication headers from environment variables."""
+    
+    def __init__(self, *args, **kwargs):
+        self.username = os.environ.get("EXAMPLE_CONDA_AUTH_USERNAME", "")
+        self.password = os.environ.get("EXAMPLE_CONDA_AUTH_PASSWORD", "")
+    
+    def __call__(self, request):
+        """Modify the request to include authentication."""
+        request.headers["X-Username"] = self.username
+        request.headers["X-Password"] = self.password
+        return request
+
+@plugins.hookimpl
+def conda_auth_handlers():
+    yield plugins.types.CondaAuthHandler(
+        name="environment-header-auth",
+        handler=EnvironmentHeaderAuth,
+    )
+```
+
+### 6. Health Check Plugin
+
+Add diagnostic checks for `conda doctor`.
+
+From `conda/plugins/hookspec.py:239`:
+
+```python
+@_hookspec
+def conda_health_checks(self) -> Iterable[CondaHealthCheck]:
+    """
+    Register health checks for conda doctor.
+    
+    Health checks can optionally provide a ``fixer`` callable.
+    """
+```
+
+<Tabs>
+  <Tab title="Check Only">
+    ```python
+    from conda import plugins
+    
+    def check_disk_space(prefix: str, verbose: bool):
+        """Check if sufficient disk space is available."""
+        import shutil
+        
+        stat = shutil.disk_usage(prefix)
+        free_gb = stat.free / (1024**3)
+        
+        if free_gb < 1.0:
+            print(f"⚠️  Low disk space: {free_gb:.2f} GB free")
+        else:
+            print(f"✓ Disk space OK: {free_gb:.2f} GB free")
+    
+    @plugins.hookimpl
+    def conda_health_checks():
+        yield plugins.types.CondaHealthCheck(
+            name="disk-space",
+            action=check_disk_space,
+            summary="Check available disk space",
+        )
+    ```
+  </Tab>
+  
+  <Tab title="Check with Fixer">
+    ```python
+    from conda import plugins
+    from conda.plugins.types import ConfirmCallback
+    from argparse import Namespace
+    
+    def check_cache(prefix: str, verbose: bool):
+        """Check for stale package cache."""
+        # Identify issues
+        print("Checking package cache...")
+    
+    def fix_cache(prefix: str, args: Namespace, confirm: ConfirmCallback) -> int:
+        """Clean stale cache entries."""
+        print("Found 150 MB of stale cache")
+        
+        # confirm() handles user prompting and dry-run automatically
+        confirm("Remove stale cache entries?")
+        
+        # Perform the fix
+        print("Cleaning cache...")
+        # ... cleanup code ...
+        
+        return 0  # Success
+    
+    @plugins.hookimpl
+    def conda_health_checks():
+        yield plugins.types.CondaHealthCheck(
+            name="cache-cleanup",
+            action=check_cache,
+            fixer=fix_cache,
+            summary="Check for stale package cache",
+            fix="Remove old cached packages",
+        )
+    ```
+  </Tab>
+</Tabs>
+
+### 7. Transaction Action Hooks
+
+Custom actions during package transactions.
+
+From `conda/plugins/hookspec.py:301` and `conda/plugins/hookspec.py:353`:
+
+```python
+@_hookspec
+def conda_pre_transaction_actions(self) -> Iterable[CondaPreTransactionAction]:
+    """Register pre-transaction hooks."""
+
+@_hookspec  
+def conda_post_transaction_actions(self) -> Iterable[CondaPostTransactionAction]:
+    """Register post-transaction hooks."""
+```
+
+<CodeGroup>
+```python Pre-Transaction Action
+from conda import plugins
+from conda.core.path_actions import Action
+
+class BackupAction(Action):
+    """Backup environment before making changes."""
+    
+    def verify(self):
+        print("Verifying backup requirements...")
+        self._verified = True
+    
+    def execute(self):
+        print(f"Backing up {self.target_prefix}...")
+        # Perform backup
+        print(f"Backing up {len(self.link_precs)} packages")
+    
+    def reverse(self):
+        print("Restore from backup if needed")
+    
+    def cleanup(self):
+        print("Cleanup backup resources")
+
+@plugins.hookimpl
+def conda_pre_transaction_actions():
+    yield plugins.types.CondaPreTransactionAction(
+        name="backup-pre-transaction",
+        action=BackupAction,
+    )
+```
+
+```python Post-Transaction Action  
+from conda import plugins
+from conda.core.path_actions import Action
+
+class NotifyAction(Action):
+    """Notify after successful installation."""
+    
+    def verify(self):
+        self._verified = True
+    
+    def execute(self):
+        print("\n=== Installation Complete ===")
+        print(f"Environment: {self.target_prefix}")
+        print(f"Installed: {len(self.link_precs)} packages")
+        print(f"Removed: {len(self.unlink_precs)} packages")
+    
+    def reverse(self):
+        pass
+    
+    def cleanup(self):
+        pass
+
+@plugins.hookimpl
+def conda_post_transaction_actions():
+    yield plugins.types.CondaPostTransactionAction(
+        name="notify-post-transaction",
+        action=NotifyAction,
+    )
+```
+</CodeGroup>
+
+### 8. Custom Settings
+
+Register new configuration options.
+
+From `conda/plugins/hookspec.py:470`:
+
+```python
+@_hookspec
+def conda_settings(self) -> Iterable[CondaSetting]:
+    """Register new setting."""
+```
+
+```python
+from conda import plugins
+from conda.common.configuration import PrimitiveParameter, SequenceParameter
+
+@plugins.hookimpl
+def conda_settings():
+    yield plugins.types.CondaSetting(
+        name="my_custom_setting",
+        description="Custom plugin configuration option",
+        parameter=PrimitiveParameter("default_value", element_type=str),
+        aliases=("my_setting_alias",),
+    )
+    
+    yield plugins.types.CondaSetting(
+        name="custom_list_setting",
+        description="List of custom values",
+        parameter=SequenceParameter(["value1", "value2"], element_type=str),
+    )
+```
+
+Users can configure your settings:
+
+```bash
+conda config --set my_custom_setting "my_value"
+conda config --append custom_list_setting "value3"
+```
+
+### 9. Environment Exporters
+
+Export environments to custom formats.
+
+From `conda/plugins/hookspec.py:718`:
+
+```python
+@_hookspec
+def conda_environment_exporters(self) -> Iterable[CondaEnvironmentExporter]:
+    """Register new conda environment exporter."""
+```
+
+```python
+import json
+from conda import plugins
+from conda.models.environment import Environment
+
+def export_json(env: Environment) -> str:
+    """Export environment to JSON format."""
+    data = {
+        "name": env.name,
+        "channels": env.channels,
+        "dependencies": [str(dep) for dep in env.dependencies],
+    }
+    return json.dumps(data, indent=2)
+
+@plugins.hookimpl
+def conda_environment_exporters():
+    yield plugins.types.CondaEnvironmentExporter(
+        name="environment-json",
+        aliases=("json",),
+        default_filenames=("environment.json",),
+        export=export_json,
+    )
+```
+
+Usage:
+```bash
+conda export --format json > environment.json
+```
+
+### 10. Package Extractors
+
+Handle custom package archive formats.
+
+From `conda/plugins/hookspec.py:775`:
+
+```python
+@_hookspec
+def conda_package_extractors(self) -> Iterable[CondaPackageExtractor]:
+    """Register package extractors for different archive formats."""
+```
+
+```python
+from conda import plugins
+from conda.common.path import PathType
+import zipfile
+
+def extract_custom_format(source_path: PathType, destination_directory: PathType) -> None:
+    """Extract a custom package format."""
+    print(f"Extracting {source_path} to {destination_directory}")
+    
+    # Custom extraction logic
+    with zipfile.ZipFile(source_path, 'r') as zip_ref:
+        zip_ref.extractall(destination_directory)
+
+@plugins.hookimpl
+def conda_package_extractors():
+    yield plugins.types.CondaPackageExtractor(
+        name="custom-package",
+        extensions=[".custom", ".cpkg"],
+        extract=extract_custom_format,
+    )
+```
+
+## Plugin Types Reference
+
+From `conda/plugins/types.py`, here are the key plugin type definitions:
+
+<AccordionGroup>
+  <Accordion title="CondaSolver - Line 172">
+    ```python
+    @dataclass
+    class CondaSolver(CondaPlugin):
+        name: str
+        backend: type[Solver]
+    ```
+  </Accordion>
+  
+  <Accordion title="CondaSubcommand - Line 78">
+    ```python
+    @dataclass
+    class CondaSubcommand(CondaPlugin):
+        name: str
+        summary: str
+        action: Callable[[Namespace | tuple[str]], int | None]
+        configure_parser: Callable[[ArgumentParser], None] | None = None
+    ```
+  </Accordion>
+  
+  <Accordion title="CondaVirtualPackage - Line 101">
+    ```python
+    @dataclass
+    class CondaVirtualPackage(CondaPlugin):
+        name: str
+        version: str | None | Callable[[], str | None | _Null]
+        build: str | None | Callable[[], str | None | _Null]
+        override_entity: Literal["version", "build"] | None = None
+    ```
+  </Accordion>
+  
+  <Accordion title="CondaHealthCheck - Line 262">
+    ```python
+    @dataclass
+    class CondaHealthCheck(CondaPlugin):
+        name: str
+        action: Callable[[str, bool], None]
+        fixer: Callable[[str, Namespace, ConfirmCallback], int] | None = None
+        summary: str | None = None
+        fix: str | None = None
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Type Hints" icon="code">
+    Include proper type hints for better IDE support and documentation.
+  </Card>
+  
+  <Card title="Handle Errors" icon="triangle-exclamation">
+    Catch and handle exceptions appropriately in your plugin code.
+  </Card>
+  
+  <Card title="Add Documentation" icon="book">
+    Document your plugin's purpose, usage, and configuration options.
+  </Card>
+  
+  <Card title="Test Thoroughly" icon="vial">
+    Test your plugin with different conda versions and scenarios.
+  </Card>
+</CardGroup>
+
+<Warning>
+**Important Considerations:**
+
+- Plugins run in the same process as conda - be careful with global state
+- Plugin names must be unique
+- Consider backward compatibility when updating plugins
+- Test offline behavior if your plugin makes network requests
+</Warning>
+
+## Plugin Distribution
+
+### Via PyPI
+
+```toml pyproject.toml
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "my-conda-plugin"
+version = "0.1.0"
+description = "My conda plugin"
+requires-python = ">=3.8"
+dependencies = ["conda>=23.0"]
+
+[project.entry-points.conda]
+my-plugin = "my_conda_plugin"
+```
+
+### Via Conda Package
+
+```yaml meta.yaml
+package:
+  name: my-conda-plugin
+  version: 0.1.0
+
+source:
+  path: .
+
+requirements:
+  host:
+    - python
+    - setuptools
+  run:
+    - python
+    - conda >=23.0
+
+test:
+  imports:
+    - my_conda_plugin
+```
+
+## Real-World Examples
+
+<CardGroup cols={2}>
+  <Card title="conda-libmamba-solver" icon="puzzle-piece">
+    Alternative solver using libmamba
+    
+    [GitHub](https://github.com/conda/conda-libmamba-solver)
+  </Card>
+  
+  <Card title="conda-auth" icon="key">
+    Authentication plugin for private channels
+    
+    [GitHub](https://github.com/conda-incubator/conda-auth)
+  </Card>
+</CardGroup>
+
+## Debugging Plugins
+
+<Steps>
+  <Step title="List Registered Plugins">
+    ```bash
+    conda plugins --list
+    ```
+  </Step>
+  
+  <Step title="Enable Debug Logging">
+    ```bash
+    conda install --debug
+    ```
+  </Step>
+  
+  <Step title="Check Plugin Registration">
+    ```python
+    from conda.plugins.manager import CondaPluginManager
+    
+    manager = CondaPluginManager()
+    print(manager.get_plugins())
+    ```
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Python API" icon="code" href="/advanced/python-api">
+    Learn about the Python API for deeper integration
+  </Card>
+  
+  <Card title="CLI Reference" icon="terminal" href="/commands/overview">
+    Command-line interface reference
+  </Card>
+</CardGroup>

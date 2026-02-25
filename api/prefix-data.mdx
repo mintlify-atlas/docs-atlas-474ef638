@@ -1,0 +1,292 @@
+---
+title: PrefixData
+description: High-level management and querying of conda environment prefixes
+---
+
+<Warning>
+**Beta** - While in beta, expect both major and minor changes across minor releases.
+</Warning>
+
+## Overview
+
+The `PrefixData` class provides high-level access to conda environment prefixes (conda environments). It allows you to query installed packages, check environment status, and manage environment metadata.
+
+## Constructor
+
+```python
+from conda.api import PrefixData
+
+prefix = PrefixData(prefix_path="/opt/conda/envs/myenv")
+```
+
+<ParamField path="prefix_path" type="str" required>
+  The path to the conda environment prefix directory.
+</ParamField>
+
+## Methods
+
+### get
+
+```python
+record = prefix.get(package_ref)
+```
+
+Retrieve a specific package record from the environment by its PackageRef.
+
+<ParamField path="package_ref" type="PackageRef" required>
+  A PackageRef instance representing the key for the PrefixRecord being sought.
+</ParamField>
+
+<ParamField path="default" type="any" default="NULL">
+  The default value to return if the record does not exist. If not specified and no record exists, `KeyError` is raised.
+</ParamField>
+
+<ResponseField name="return" type="PrefixRecord">
+  The PrefixRecord for the requested package.
+</ResponseField>
+
+#### Example
+
+```python
+from conda.api import PrefixData
+from conda.models.records import PackageRef
+
+prefix = PrefixData("/opt/conda/envs/myenv")
+
+try:
+    record = prefix.get(PackageRef("numpy", "1.21.0", "py39_0"))
+    print(f"Found: {record.name} {record.version}")
+except KeyError:
+    print("Package not installed in this environment")
+
+# With a default value
+record = prefix.get(PackageRef("scipy", "1.7.0", "py39_0"), default=None)
+if record:
+    print(f"Found: {record.name}")
+else:
+    print("Package not installed")
+```
+
+### query
+
+```python
+results = prefix.query("numpy>=1.20")
+```
+
+Run a query against this specific prefix instance.
+
+<ParamField path="package_ref_or_match_spec" type="PackageRef or MatchSpec or str" required>
+  Either an exact PackageRef to match against, or a MatchSpec query object. A string will be turned into a MatchSpec automatically.
+</ParamField>
+
+<ResponseField name="return" type="tuple[PrefixRecord]">
+  A tuple of PrefixRecord objects matching the query.
+</ResponseField>
+
+#### Example
+
+```python
+from conda.api import PrefixData
+from conda.models.match_spec import MatchSpec
+
+prefix = PrefixData("/opt/conda/envs/myenv")
+
+# Query for numpy packages
+results = prefix.query("numpy>=1.20,<2.0")
+
+for record in results:
+    print(f"{record.name} {record.version} installed at {record.files[0] if record.files else 'N/A'}")
+
+# Query with MatchSpec
+results = prefix.query(MatchSpec("python=3.11"))
+if results:
+    print(f"Python version: {results[0].version}")
+```
+
+### iter_records
+
+```python
+for record in prefix.iter_records():
+    print(record.name)
+```
+
+Iterates over all records contained in the prefix.
+
+<ResponseField name="return" type="Iterable[PrefixRecord]">
+  A generator over all PrefixRecord objects in the environment.
+</ResponseField>
+
+<Warning>
+This is a generator that is exhausted on first use. If you need to iterate multiple times, store the results in a list.
+</Warning>
+
+#### Example
+
+```python
+from conda.api import PrefixData
+
+prefix = PrefixData("/opt/conda/envs/myenv")
+
+# List all installed packages
+print("Installed packages:")
+for record in prefix.iter_records():
+    print(f"  {record.name} {record.version} (channel: {record.channel.name if record.channel else 'unknown'})")
+
+# Count packages by channel
+from collections import Counter
+channel_counts = Counter()
+
+for record in prefix.iter_records():
+    channel_name = record.channel.name if record.channel else "unknown"
+    channel_counts[channel_name] += 1
+
+print("\nPackages by channel:")
+for channel, count in channel_counts.most_common():
+    print(f"  {channel}: {count}")
+```
+
+### reload
+
+```python
+prefix = prefix.reload()
+```
+
+Update the instance with new information. Backing information (i.e., contents of the conda-meta directory) is lazily loaded on first use by the other methods of this class.
+
+<Warning>
+You should only use this method if you are **sure** you have outdated data. In most cases, the cached information is sufficient and more efficient.
+</Warning>
+
+<ResponseField name="return" type="PrefixData">
+  Returns self for method chaining.
+</ResponseField>
+
+#### Example
+
+```python
+from conda.api import PrefixData
+
+prefix = PrefixData("/opt/conda/envs/myenv")
+
+# Query some data
+results = prefix.query("numpy")
+
+# Some external process may have modified the environment
+# Force reload to get fresh data
+prefix = prefix.reload()
+results = prefix.query("numpy")  # Now uses fresh data
+```
+
+## Properties
+
+### is_writable
+
+```python
+if prefix.is_writable:
+    print("Can modify this environment")
+elif prefix.is_writable is False:
+    print("Environment is read-only")
+else:
+    print("Environment does not exist")
+```
+
+Indicates if the prefix is writable or read-only.
+
+<ResponseField name="type" type="bool or None">
+  - `True` if the prefix is writable
+  - `False` if the prefix is read-only
+  - `None` if the prefix does not exist as a conda environment
+</ResponseField>
+
+#### Example
+
+```python
+from conda.api import PrefixData
+from conda.base.context import context
+import os
+
+# Check writability of base environment
+base_prefix = PrefixData(context.root_prefix)
+print(f"Base environment: {context.root_prefix}")
+print(f"  Exists: {base_prefix.is_writable is not None}")
+print(f"  Writable: {base_prefix.is_writable}")
+
+# Check a custom environment
+custom_env = "/opt/conda/envs/test"
+prefix = PrefixData(custom_env)
+if prefix.is_writable is None:
+    print(f"\n{custom_env} does not exist")
+else:
+    status = "writable" if prefix.is_writable else "read-only"
+    print(f"\n{custom_env} exists and is {status}")
+```
+
+## Complete Example
+
+```python
+from conda.api import PrefixData
+from conda.base.context import context
+import os
+
+def analyze_environment(prefix_path):
+    """Analyze a conda environment and print details."""
+    prefix = PrefixData(prefix_path)
+    
+    print(f"\nEnvironment: {prefix_path}")
+    print("=" * 60)
+    
+    # Check if environment exists and is writable
+    if prefix.is_writable is None:
+        print("Environment does not exist")
+        return
+    
+    status = "writable" if prefix.is_writable else "read-only"
+    print(f"Status: {status}\n")
+    
+    # Count installed packages
+    packages = list(prefix.iter_records())
+    print(f"Total packages: {len(packages)}\n")
+    
+    # List Python version
+    python_results = prefix.query("python")
+    if python_results:
+        py_record = python_results[0]
+        print(f"Python: {py_record.version}\n")
+    
+    # Show packages by channel
+    from collections import defaultdict
+    by_channel = defaultdict(list)
+    
+    for record in packages:
+        channel_name = record.channel.name if record.channel else "unknown"
+        by_channel[channel_name].append(record)
+    
+    print("Packages by channel:")
+    for channel, pkgs in sorted(by_channel.items(), key=lambda x: len(x[1]), reverse=True):
+        print(f"  {channel}: {len(pkgs)} packages")
+        # Show first few packages from each channel
+        for pkg in pkgs[:3]:
+            print(f"    - {pkg.name} {pkg.version}")
+        if len(pkgs) > 3:
+            print(f"    ... and {len(pkgs) - 3} more")
+    
+    # Check for specific packages
+    print("\nChecking for common packages:")
+    for pkg_name in ["numpy", "pandas", "matplotlib", "scikit-learn"]:
+        results = prefix.query(pkg_name)
+        if results:
+            print(f"  ✓ {pkg_name} {results[0].version}")
+        else:
+            print(f"  ✗ {pkg_name} not installed")
+
+# Analyze the base environment
+analyze_environment(context.root_prefix)
+
+# Analyze other environments
+envs_dir = os.path.join(context.root_prefix, "envs")
+if os.path.exists(envs_dir):
+    for env_name in os.listdir(envs_dir):
+        env_path = os.path.join(envs_dir, env_name)
+        if os.path.isdir(env_path):
+            analyze_environment(env_path)
+```

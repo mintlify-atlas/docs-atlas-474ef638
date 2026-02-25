@@ -1,0 +1,85 @@
+---
+title: Python API Overview
+description: High-level Python API for programmatic access to conda functionality
+---
+
+<Warning>
+**Beta Status** - While in beta, expect both major and minor changes across minor releases.
+</Warning>
+
+## Introduction
+
+The conda Python API provides high-level programmatic access to conda's core functionality. This API allows developers to integrate conda's package management, solving, and environment management capabilities directly into Python applications.
+
+The API is designed to be more stable and user-friendly than using conda's internal modules directly.
+
+## When to Use the Python API vs CLI
+
+**Use the Python API when:**
+- You need to integrate conda functionality into a Python application
+- You want programmatic control over environment solving and package management
+- You're building tools or services that automate conda operations
+- You need to query package metadata, caches, or repodata programmatically
+
+**Use the CLI when:**
+- You're performing interactive or one-off operations
+- You're writing shell scripts or batch files
+- You need features not yet exposed in the Python API
+- You want the most stable interface (the CLI is considered more stable than the API)
+
+## Installation and Imports
+
+The Python API is included with conda. Simply import the classes you need:
+
+```python
+from conda.api import Solver, SubdirData, PackageCacheData, PrefixData
+from conda.api import DepsModifier, UpdateModifier
+from conda.models.match_spec import MatchSpec
+from conda.models.channel import Channel
+```
+
+## Available APIs
+
+The conda Python API provides the following main classes:
+
+- **[Solver](/api/solver)** - High-level access to conda's dependency solving logic
+- **[SubdirData](/api/subdir-data)** - Management and querying of repodata.json for subdirectories
+- **[PackageCacheData](/api/package-cache)** - Management and querying of package caches
+- **[PrefixData](/api/prefix-data)** - Management and querying of conda environment prefixes
+
+## Quick Example
+
+```python
+from conda.api import Solver, SubdirData
+from conda.models.match_spec import MatchSpec
+
+# Query available packages
+results = SubdirData.query_all("numpy>=1.20")
+for record in results:
+    print(f"{record.name} {record.version} from {record.channel}")
+
+# Solve for an environment
+solver = Solver(
+    prefix="/path/to/env",
+    channels=["conda-forge", "defaults"],
+    subdirs=["linux-64", "noarch"],
+    specs_to_add=[MatchSpec("numpy>=1.20"), MatchSpec("pandas")]
+)
+
+final_state = solver.solve_final_state()
+for package in final_state:
+    print(f"{package.name} {package.version}")
+```
+
+## Beta Status Notice
+
+<Warning>
+All classes and methods in the conda Python API are currently in **beta** status. This means:
+
+- Both major and minor changes may occur across minor releases
+- Method signatures may change
+- New parameters may be added or existing ones modified
+- Return types may evolve
+
+For production use, pin your conda version and test thoroughly before upgrading.
+</Warning>

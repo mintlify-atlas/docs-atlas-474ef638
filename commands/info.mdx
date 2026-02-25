@@ -1,0 +1,176 @@
+---
+title: conda info
+description: Display information about current conda install
+---
+
+The `conda info` command displays information about the current conda installation, including version information, environment details, configuration files, and system information.
+
+## Syntax
+
+```bash
+conda info [options]
+```
+
+## Options
+
+### `-a, --all`
+Show all information including environment variables and system details.
+
+```bash
+conda info --all
+```
+
+### `--base`
+Display the base environment path.
+
+```bash
+conda info --base
+```
+
+### `-e, --envs`
+List all known conda environments. Combine with `--json` to obtain more details including creation time, last modified time, and size information.
+
+```bash
+conda info --envs
+conda info --envs --json
+```
+
+### `-s, --system`
+List environment variables and system information.
+
+```bash
+conda info --system
+```
+
+### `--size`
+Show conda-managed disk usage for each environment (excludes untracked files created after installation). Can only be used with `--envs`.
+
+```bash
+conda info --envs --size
+```
+
+### `--unsafe-channels`
+Display list of channels with tokens exposed.
+
+<Warning>
+This option will expose authentication tokens in channel URLs. Use with caution.
+</Warning>
+
+```bash
+conda info --unsafe-channels
+```
+
+### `--json`
+Report all output as JSON. Suitable for programmatic use.
+
+```bash
+conda info --json
+```
+
+### `--offline`
+(Deprecated) Run in offline mode.
+
+## Output Information
+
+When run without arguments, `conda info` displays:
+
+- **Active environment**: Current active environment name and location
+- **Shell level**: Current conda shell level (CONDA_SHLVL)
+- **User config file**: Location of user .condarc file
+- **Populated config files**: All .condarc files being used
+- **Conda version**: Installed conda version
+- **Conda-build version**: Installed conda-build version (if available)
+- **Python version**: Python version information
+- **Solver**: Current solver being used (classic or libmamba)
+- **Virtual packages**: System virtual packages detected
+- **Base environment**: Location and writability of base environment
+- **Conda av data dir**: Location of artifact verification data
+- **Conda av metadata url**: URL for artifact verification metadata
+- **Channel URLs**: Configured channels
+- **Package cache**: Location of package cache directories
+- **Envs directories**: Directories where environments are stored
+- **Temporary directory**: System temporary directory
+- **Platform**: Current platform/subdir
+- **User-agent**: Conda user agent string
+- **Administrator/UID:GID**: User permissions information
+- **Netrc file**: Location of netrc file (if configured)
+- **Offline mode**: Whether offline mode is enabled
+
+## Common Use Cases
+
+### Display basic conda information
+
+Get an overview of your conda installation:
+
+```bash
+conda info
+```
+
+### List all environments
+
+See all available conda environments:
+
+```bash
+conda info --envs
+```
+
+### Get base environment path
+
+Useful for scripting:
+
+```bash
+conda info --base
+```
+
+This returns just the path, for example:
+```
+/home/user/miniconda3
+```
+
+### Check environment sizes
+
+See how much disk space each environment is using:
+
+```bash
+conda info --envs --size
+```
+
+<Note>
+The `--size` option only counts conda-managed files and excludes any files created after package installation.
+</Note>
+
+### View system information
+
+See environment variables and system details:
+
+```bash
+conda info --system
+```
+
+This displays:
+- Python sys.version, sys.prefix, and sys.executable
+- Conda location and related executables
+- User site directories
+- All CONDA_*, PYTHON_*, and *_PATH environment variables
+- Proxy settings (values hidden for security)
+
+### Get JSON output for scripting
+
+Extract conda information programmatically:
+
+```bash
+conda info --json
+```
+
+With environments and details:
+```bash
+conda info --envs --json
+```
+
+### Check all information
+
+Get comprehensive output including system variables:
+
+```bash
+conda info --all
+```

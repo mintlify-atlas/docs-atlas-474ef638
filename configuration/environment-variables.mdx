@@ -1,0 +1,378 @@
+---
+title: Environment Variables
+description: Configure conda using environment variables for temporary or system-wide settings
+---
+
+## Overview
+
+Conda can be configured using environment variables prefixed with `CONDA_`. These variables provide a way to:
+
+- Temporarily override configuration for a single command
+- Set system-wide defaults without modifying `.condarc` files
+- Configure conda in containerized or CI/CD environments
+- Pass configuration to conda programmatically
+
+Environment variables have **higher precedence** than `.condarc` files but lower precedence than command-line arguments.
+
+## Core Environment Variables
+
+These environment variables are automatically set by conda and used to track the current environment state:
+
+<ParamField path="CONDA_PREFIX" type="string">
+  Absolute path to the currently active conda environment. This is the primary way to detect if a conda environment is active.
+  
+  **Example:** `/home/user/miniconda3/envs/myenv`
+</ParamField>
+
+<ParamField path="CONDA_DEFAULT_ENV" type="string">
+  Name of the currently active environment. For named environments, this is the environment name. For environments created with a path, this is the full path.
+  
+  **Example:** `myenv` or `/path/to/env`
+</ParamField>
+
+<ParamField path="CONDA_SHLVL" type="integer">
+  Shell level - indicates how many conda environments are currently stacked (activated on top of each other). Starts at 0 when no environment is active, increments with each activation.
+  
+  **Example:** `1` (one environment active), `2` (stacked environments)
+</ParamField>
+
+<ParamField path="CONDA_PROMPT_MODIFIER" type="string">
+  The string that is prepended to your shell prompt when an environment is active.
+  
+  **Example:** `(myenv) `
+</ParamField>
+
+<ParamField path="CONDA_EXE" type="string">
+  Full path to the conda executable being used.
+  
+  **Example:** `/home/user/miniconda3/bin/conda`
+</ParamField>
+
+<ParamField path="CONDA_PYTHON_EXE" type="string">
+  Path to the Python interpreter in the base conda environment.
+  
+  **Example:** `/home/user/miniconda3/bin/python`
+</ParamField>
+
+<ParamField path="_CONDA_ROOT" type="string">
+  Path to the root conda installation directory (base environment).
+  
+  **Example:** `/home/user/miniconda3`
+</ParamField>
+
+## Configuration Environment Variables
+
+Any configuration parameter in `.condarc` can be set via environment variables using the format `CONDA_<PARAMETER_NAME>` (uppercase, with underscores).
+
+### Common Configuration Variables
+
+<ParamField path="CONDA_CHANNELS" type="string">
+  Comma-separated list of channels to use. Overrides the `channels` setting in `.condarc`.
+  
+  ```bash
+  export CONDA_CHANNELS="conda-forge,defaults"
+  ```
+</ParamField>
+
+<ParamField path="CONDA_CHANNEL_PRIORITY" type="string">
+  Set channel priority to `strict`, `flexible`, or `disabled`.
+  
+  ```bash
+  export CONDA_CHANNEL_PRIORITY="strict"
+  ```
+</ParamField>
+
+<ParamField path="CONDA_ENVS_DIRS" type="string">
+  Path separator-delimited list of directories to search for environments.
+  
+  ```bash
+  # Linux/macOS
+  export CONDA_ENVS_DIRS="/opt/envs:$HOME/envs"
+  
+  # Windows
+  set CONDA_ENVS_DIRS=C:\envs;%USERPROFILE%\envs
+  ```
+</ParamField>
+
+<ParamField path="CONDA_PKGS_DIRS" type="string">
+  Path separator-delimited list of package cache directories.
+  
+  ```bash
+  export CONDA_PKGS_DIRS="/scratch/pkgs:$HOME/.conda/pkgs"
+  ```
+</ParamField>
+
+<ParamField path="CONDA_SOLVER" type="string">
+  Specify which solver to use: `libmamba` or `classic`.
+  
+  ```bash
+  export CONDA_SOLVER="libmamba"
+  ```
+</ParamField>
+
+<ParamField path="CONDA_SUBDIR" type="string">
+  Override the platform/architecture subdirectory (e.g., `linux-64`, `osx-arm64`, `win-64`).
+  
+  ```bash
+  export CONDA_SUBDIR="linux-64"
+  ```
+</ParamField>
+
+### Network Configuration
+
+<ParamField path="CONDA_SSL_VERIFY" type="string">
+  Control SSL certificate verification. Set to `true`, `false`, or a path to a CA bundle.
+  
+  ```bash
+  export CONDA_SSL_VERIFY="false"  # Disable (not recommended)
+  export CONDA_SSL_VERIFY="/path/to/cacert.pem"  # Use custom CA
+  ```
+</ParamField>
+
+<ParamField path="HTTP_PROXY" type="string">
+  HTTP proxy server URL.
+  
+  ```bash
+  export HTTP_PROXY="http://proxy.company.com:8080"
+  ```
+</ParamField>
+
+<ParamField path="HTTPS_PROXY" type="string">
+  HTTPS proxy server URL.
+  
+  ```bash
+  export HTTPS_PROXY="https://proxy.company.com:8080"
+  ```
+</ParamField>
+
+### Behavior Modifiers
+
+<ParamField path="CONDA_ALWAYS_YES" type="string">
+  Automatically answer yes to all prompts. Set to `true` or `false`.
+  
+  ```bash
+  export CONDA_ALWAYS_YES="true"
+  ```
+</ParamField>
+
+<ParamField path="CONDA_QUIET" type="string">
+  Suppress progress bars and non-essential output.
+  
+  ```bash
+  export CONDA_QUIET="true"
+  ```
+</ParamField>
+
+<ParamField path="CONDA_VERBOSITY" type="integer">
+  Control output verbosity. Higher numbers mean more verbose output (0-4).
+  
+  ```bash
+  export CONDA_VERBOSITY="2"
+  ```
+</ParamField>
+
+<ParamField path="CONDA_JSON" type="string">
+  Output results in JSON format.
+  
+  ```bash
+  export CONDA_JSON="true"
+  ```
+</ParamField>
+
+### Developer Variables
+
+<ParamField path="CONDA_DEV" type="string">
+  Enable development mode for running conda from source.
+  
+  ```bash
+  export CONDA_DEV="1"
+  ```
+</ParamField>
+
+<ParamField path="CONDA_NO_PLUGINS" type="string">
+  Disable all conda plugins except built-in ones.
+  
+  ```bash
+  export CONDA_NO_PLUGINS="true"
+  ```
+</ParamField>
+
+<ParamField path="CONDA_NO_LOCK" type="string">
+  Disable file locking (useful in some network file systems, but dangerous).
+  
+  ```bash
+  export CONDA_NO_LOCK="1"
+  ```
+</ParamField>
+
+## How to Set Environment Variables
+
+### Temporary (Current Session Only)
+
+**Linux/macOS:**
+```bash
+export CONDA_CHANNELS="conda-forge,defaults"
+conda install numpy
+```
+
+**Windows (CMD):**
+```cmd
+set CONDA_CHANNELS=conda-forge,defaults
+conda install numpy
+```
+
+**Windows (PowerShell):**
+```powershell
+$env:CONDA_CHANNELS="conda-forge,defaults"
+conda install numpy
+```
+
+### Permanent (All Sessions)
+
+**Linux/macOS (bash):**
+Add to `~/.bashrc` or `~/.bash_profile`:
+```bash
+export CONDA_CHANNELS="conda-forge,defaults"
+export CONDA_SOLVER="libmamba"
+```
+
+**Linux/macOS (zsh):**
+Add to `~/.zshrc`:
+```zsh
+export CONDA_CHANNELS="conda-forge,defaults"
+export CONDA_SOLVER="libmamba"
+```
+
+**Windows:**
+1. Open System Properties → Advanced → Environment Variables
+2. Add new User or System variables with `CONDA_` prefix
+
+### For a Single Command
+
+**Linux/macOS:**
+```bash
+CONDA_CHANNELS="conda-forge" conda install numpy
+```
+
+**Windows (CMD):**
+```cmd
+set CONDA_CHANNELS=conda-forge && conda install numpy
+```
+
+## Common Use Cases
+
+### CI/CD Pipeline
+
+Configure conda for automated builds:
+
+```bash
+export CONDA_ALWAYS_YES="true"
+export CONDA_QUIET="true"
+export CONDA_SOLVER="libmamba"
+export CONDA_CHANNELS="conda-forge,defaults"
+
+conda create -n build-env python=3.11
+conda activate build-env
+conda install numpy pandas
+```
+
+### Corporate Proxy Environment
+
+Configure network access through corporate proxy:
+
+```bash
+export HTTP_PROXY="http://user:pass@proxy.corp.com:8080"
+export HTTPS_PROXY="http://user:pass@proxy.corp.com:8080"
+export CONDA_SSL_VERIFY="/etc/ssl/certs/ca-bundle.crt"
+
+conda install matplotlib
+```
+
+### Cross-Platform Package Creation
+
+Build packages for different platforms:
+
+```bash
+# Build for Linux on macOS
+CONDA_SUBDIR="linux-64" conda create -n linux-env python=3.11
+
+# Build for ARM on x86
+CONDA_SUBDIR="osx-arm64" conda create -n arm-env python=3.11
+```
+
+### Testing Different Solvers
+
+Quickly test both solvers:
+
+```bash
+# Try with classic solver
+CONDA_SOLVER="classic" conda install scipy
+
+# Try with libmamba solver
+CONDA_SOLVER="libmamba" conda install scipy
+```
+
+## Priority and Overrides
+
+Configuration sources are merged in this order (highest to lowest priority):
+
+1. **Command-line flags** (e.g., `--channel conda-forge`)
+2. **Environment variables** (e.g., `CONDA_CHANNELS`)
+3. **Environment .condarc** (`$CONDA_PREFIX/.condarc`)
+4. **User .condarc** (`~/.condarc`)
+5. **System .condarc** (`$CONDA_ROOT/.condarc`)
+
+To mark a variable as final and prevent it from being overridden by lower priority sources, append `!important`:
+
+```bash
+export CONDA_CHANNELS="conda-forge!important"
+```
+
+## Environment Variable String Delimiters
+
+For list parameters, conda uses specific delimiters:
+
+- **Most lists**: Comma (`,`)
+- **Path lists** (`envs_dirs`, `pkgs_dirs`): OS path separator (`:` on Unix, `;` on Windows)
+- **Pinned/disallowed packages**: Ampersand (`&`)
+
+Examples:
+```bash
+# Comma-separated
+export CONDA_CHANNELS="conda-forge,bioconda,defaults"
+
+# Path separator
+export CONDA_ENVS_DIRS="/opt/envs:/home/user/envs"  # Unix
+set CONDA_ENVS_DIRS=C:\envs;D:\envs  # Windows
+
+# Ampersand-separated
+export CONDA_PINNED_PACKAGES="python=3.11&numpy>=1.20"
+```
+
+## Checking Environment Variables
+
+View all conda-related environment variables:
+
+```bash
+# Linux/macOS
+env | grep CONDA
+
+# Windows (CMD)
+set | findstr CONDA
+
+# Windows (PowerShell)
+Get-ChildItem Env: | Where-Object {$_.Name -like "*CONDA*"}
+```
+
+View how conda interprets all configuration:
+
+```bash
+conda config --show
+conda config --show-sources
+```
+
+## See Also
+
+- [.condarc Configuration](/configuration/condarc) - File-based configuration
+- [Settings Reference](/configuration/settings) - Complete list of all settings
+- [conda activate](/commands/activate) - Environment activation details

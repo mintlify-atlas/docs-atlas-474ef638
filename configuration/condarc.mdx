@@ -1,0 +1,272 @@
+---
+title: .condarc Configuration File
+description: Learn about conda's .condarc configuration file, its location, precedence, and common options
+---
+
+## What is .condarc
+
+The `.condarc` file is conda's configuration file where you can specify settings that modify conda's behavior. It's written in YAML format and allows you to customize channels, environment directories, package caching, network settings, and much more.
+
+The name "condarc" stands for "conda run command" configuration file. Think of it as conda's personal preferences file that persists across all conda operations.
+
+## File Locations and Precedence
+
+Conda searches for `.condarc` files in multiple locations and merges them with a specific precedence order:
+
+<Steps>
+  <Step title="Command-line arguments">
+    Highest priority - flags passed directly to conda commands
+  </Step>
+  
+  <Step title="Environment variables">
+    Settings prefixed with `CONDA_` (e.g., `CONDA_CHANNELS`)
+  </Step>
+  
+  <Step title="Environment .condarc">
+    Located at `$CONDA_PREFIX/.condarc` in the active environment
+  </Step>
+  
+  <Step title="User .condarc">
+    Located at `~/.condarc` (Linux/macOS) or `%USERPROFILE%\.condarc` (Windows)
+  </Step>
+  
+  <Step title="System .condarc">
+    Located at `$CONDA_ROOT/.condarc` in the conda installation directory
+  </Step>
+</Steps>
+
+Settings in higher-priority locations override those in lower-priority locations. You can view all configuration sources and their values with:
+
+```bash
+conda config --show-sources
+```
+
+## Common Configuration Options
+
+Here are the most frequently used `.condarc` settings:
+
+### Channels
+
+Control where conda searches for packages:
+
+```yaml
+channels:
+  - conda-forge
+  - defaults
+
+channel_priority: flexible  # or 'strict' or 'disabled'
+```
+
+<ParamField path="channels" type="list">
+  List of channels to search for packages. Channels earlier in the list have higher priority.
+</ParamField>
+
+<ParamField path="channel_priority" type="string" default="flexible">
+  How strictly conda respects channel priority:
+  - `strict`: Only use packages from highest-priority channel
+  - `flexible`: Allow mixing packages from different channels
+  - `disabled`: Ignore channel priority, use latest version
+</ParamField>
+
+<ParamField path="channel_alias" type="string" default="https://conda.anaconda.org">
+  Base URL for channel names that don't include a full URL.
+</ParamField>
+
+### Environment and Package Directories
+
+```yaml
+envs_dirs:
+  - ~/my-envs
+  - ~/miniconda3/envs
+
+pkgs_dirs:
+  - ~/my-packages
+  - ~/miniconda3/pkgs
+```
+
+<ParamField path="envs_dirs" type="list">
+  Directories to search for named environments. New environments are created in the first writable directory.
+</ParamField>
+
+<ParamField path="pkgs_dirs" type="list">
+  Directories for package caches. Downloaded packages are stored in the first writable directory.
+</ParamField>
+
+### Solver Settings
+
+```yaml
+solver: libmamba  # or 'classic'
+
+aggressive_update_packages:
+  - ca-certificates
+  - certifi
+  - openssl
+```
+
+<ParamField path="solver" type="string" default="classic">
+  Which solver backend to use. `libmamba` is faster, `classic` is the traditional conda solver.
+</ParamField>
+
+### Network and Security
+
+```yaml
+ssl_verify: true  # or false, or path to CA bundle
+
+proxy_servers:
+  http: http://proxy.example.com:8080
+  https: https://proxy.example.com:8080
+
+remote_connect_timeout_secs: 9.15
+remote_read_timeout_secs: 60.0
+```
+
+<ParamField path="ssl_verify" type="boolean | string" default="true">
+  Verify SSL certificates. Can be `true`, `false`, a path to a CA bundle, or `'truststore'` to use OS certificates.
+</ParamField>
+
+### User Experience
+
+```yaml
+auto_activate: true
+changeps1: true
+env_prompt: '({name}) '
+always_yes: false
+quiet: false
+```
+
+<ParamField path="auto_activate" type="boolean" default="true">
+  Automatically activate the base environment when starting a new shell.
+</ParamField>
+
+<ParamField path="changeps1" type="boolean" default="true">
+  Modify the command prompt to show the active environment name.
+</ParamField>
+
+## Configuration Examples
+
+### Basic User Configuration
+
+A typical `~/.condarc` for a data scientist:
+
+```yaml
+channels:
+  - conda-forge
+  - defaults
+
+channel_priority: flexible
+
+auto_activate: true
+changeps1: true
+
+create_default_packages:
+  - pip
+  - ipython
+```
+
+### Corporate Environment
+
+Configuration for working behind a corporate firewall:
+
+```yaml
+channels:
+  - https://repo.company.com/conda/main
+  - defaults
+
+ssl_verify: /path/to/company-ca-bundle.crt
+
+proxy_servers:
+  http: http://proxy.company.com:8080
+  https: http://proxy.company.com:8080
+
+remote_connect_timeout_secs: 30
+remote_read_timeout_secs: 120
+```
+
+### CI/CD Pipeline
+
+Settings optimized for automated builds:
+
+```yaml
+always_yes: true
+quiet: true
+
+safety_checks: disabled
+rollback_enabled: false
+
+default_threads: 4
+```
+
+## Managing Your .condarc
+
+### Viewing Configuration
+
+See all active settings:
+```bash
+conda config --show
+```
+
+See settings from all configuration files:
+```bash
+conda config --show-sources
+```
+
+Get help for a specific parameter:
+```bash
+conda config --describe channel_priority
+```
+
+### Modifying Configuration
+
+Add a channel:
+```bash
+conda config --add channels conda-forge
+```
+
+Set a boolean or string value:
+```bash
+conda config --set channel_priority strict
+```
+
+Remove a channel:
+```bash
+conda config --remove channels defaults
+```
+
+Remove a key entirely:
+```bash
+conda config --remove-key channels
+```
+
+### Configuration Scopes
+
+Modify different configuration files:
+
+```bash
+# User configuration (default)
+conda config --set always_yes true
+
+# System-wide configuration
+conda config --system --set always_yes true
+
+# Current environment only
+conda config --env --set always_yes true
+
+# Specific file
+conda config --file /path/to/.condarc --set always_yes true
+```
+
+## Validation
+
+Validate all `.condarc` files for syntax errors:
+
+```bash
+conda config --validate
+```
+
+This checks all configuration sources for parsing errors and reports any issues found.
+
+## See Also
+
+- [Environment Variables](/configuration/environment-variables) - Alternative way to configure conda
+- [Settings Reference](/configuration/settings) - Complete list of all configuration options
+- [Channels Guide](/user-guide/channels) - Understanding conda channels

@@ -1,0 +1,234 @@
+---
+title: conda activate
+description: Activate a conda environment
+---
+
+## Overview
+
+The `conda activate` command activates a conda environment by modifying your shell's PATH and environment variables. This is a sourced command that must be run in your shell, not as a standalone executable.
+
+<Note>
+Before using `conda activate`, you must initialize conda for your shell using `conda init`. This sets up the necessary shell integration.
+</Note>
+
+## Syntax
+
+```bash
+conda activate [environment_name_or_path]
+```
+
+If no environment is specified, activates the base environment.
+
+## Arguments
+
+<ParamField path="environment_name_or_path" type="string">
+  Name of the environment to activate, or full path to the environment prefix. If the argument contains `/` or `\`, it's treated as a path; otherwise, it's treated as an environment name.
+  
+  If not specified, the default activation environment (usually `base`) is activated.
+</ParamField>
+
+## Options
+
+<ParamField path="--stack" type="boolean">
+  Stack the new environment on top of the current environment rather than replacing it. This allows you to have multiple environments active simultaneously.
+  
+  When stacking:
+  - The new environment's PATH is prepended
+  - The current environment remains accessible
+  - Use `conda deactivate` multiple times to unstack
+</ParamField>
+
+<ParamField path="--no-stack" type="boolean">
+  Do not stack the environment (default behavior). This replaces the current active environment with the new one.
+</ParamField>
+
+<ParamField path="--dev" type="boolean">
+  Use `sys.executable -m conda` in wrapper scripts instead of CONDA_EXE. This is mainly for development and testing purposes.
+</ParamField>
+
+## What Happens During Activation
+
+When you activate an environment, conda performs several operations:
+
+<Steps>
+  <Step title="Update PATH">
+    Prepends the environment's `bin/` (or `Scripts/` on Windows) directory to your PATH, making the environment's executables available.
+  </Step>
+  
+  <Step title="Set environment variables">
+    Sets conda-specific environment variables:
+    - `CONDA_PREFIX`: Path to the active environment
+    - `CONDA_DEFAULT_ENV`: Name of the active environment
+    - `CONDA_SHLVL`: Shell level (increments with each activation)
+    - `CONDA_PROMPT_MODIFIER`: Prompt modifier string
+  </Step>
+  
+  <Step title="Run activation scripts">
+    Executes any activation scripts located in `$CONDA_PREFIX/etc/conda/activate.d/`. These scripts can set additional environment variables or perform setup tasks.
+  </Step>
+  
+  <Step title="Update command prompt">
+    Modifies your shell prompt to show the active environment name (if `changeps1` is enabled in config).
+  </Step>
+</Steps>
+
+## Environment Variables Set
+
+| Variable | Description |
+|----------|-------------|
+| `CONDA_PREFIX` | Full path to the activated environment |
+| `CONDA_DEFAULT_ENV` | Name of the environment (or "base" for base environment) |
+| `CONDA_SHLVL` | Shell level - number of active environments (0 = no active environment) |
+| `CONDA_PROMPT_MODIFIER` | String to prepend to shell prompt |
+| `CONDA_PREFIX_N` | When stacking, stores previous environment paths (N = shell level) |
+| `CONDA_STACKED_N` | Indicates if environment at level N was stacked |
+
+## Examples
+
+### Activate an environment by name
+
+```bash
+conda activate myenv
+```
+
+Activates the environment named `myenv` from the default envs directory.
+
+### Activate an environment by path
+
+```bash
+conda activate /path/to/my/env
+```
+
+Activates an environment at a specific location.
+
+### Activate the base environment
+
+```bash
+conda activate
+```
+
+or explicitly:
+
+```bash
+conda activate base
+```
+
+### Stack environments
+
+```bash
+conda activate base
+conda activate --stack myenv
+```
+
+Now both `base` and `myenv` are active, with `myenv`'s PATH taking precedence.
+
+### Reactivate current environment
+
+If you're already in an environment and run `conda activate` on the same environment, conda will reactivate it (refresh environment variables and run activation scripts).
+
+```bash
+conda activate myenv  # First activation
+conda activate myenv  # Reactivates the same environment
+```
+
+## Shell Support
+
+Conda activation works with multiple shells:
+
+- **Bash** - Linux, macOS, Windows (Git Bash, WSL)
+- **Zsh** - macOS, Linux
+- **Fish** - Linux, macOS
+- **PowerShell** - Windows, cross-platform
+- **Cmd.exe** - Windows
+- **Tcsh/Csh** - Linux, macOS
+- **Xonsh** - Cross-platform
+
+## Common Use Cases
+
+<AccordionGroup>
+  <Accordion title="Switch between project environments">
+    Quickly switch between different project environments:
+    
+    ```bash
+    conda activate project1
+    # Work on project1
+    conda deactivate
+    
+    conda activate project2
+    # Work on project2
+    ```
+  </Accordion>
+
+  <Accordion title="Automatic activation in scripts">
+    Activate environments in shell scripts:
+    
+    ```bash
+    #!/bin/bash
+    eval "$(conda shell.bash hook)"
+    conda activate myenv
+    python script.py
+    ```
+  </Accordion>
+
+  <Accordion title="Stacked environments for testing">
+    Stack a testing environment on top of your base environment:
+    
+    ```bash
+    conda activate base
+    conda activate --stack test-env
+    pytest
+    conda deactivate  # Returns to base
+    ```
+  </Accordion>
+
+  <Accordion title="Development with multiple tools">
+    Use stacking when you need tools from multiple environments:
+    
+    ```bash
+    conda activate base-tools
+    conda activate --stack project-env
+    # Now you have access to tools from both environments
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="CommandNotFoundError: conda activate">
+    If you get this error, you need to initialize conda for your shell:
+    
+    ```bash
+    conda init bash  # or zsh, fish, etc.
+    ```
+    
+    Then restart your shell or run:
+    
+    ```bash
+    source ~/.bashrc  # or ~/.zshrc, etc.
+    ```
+  </Accordion>
+
+  <Accordion title="Environment not found">
+    If conda can't find your environment:
+    
+    1. List all environments: `conda env list`
+    2. Use the full path: `conda activate /full/path/to/env`
+    3. Check if the environment exists in your envs directory
+  </Accordion>
+
+  <Accordion title="PATH not updated correctly">
+    If your PATH isn't updated after activation:
+    
+    1. Check that conda is properly initialized
+    2. Try reactivating: `conda deactivate && conda activate myenv`
+    3. Verify with: `echo $PATH`
+  </Accordion>
+</AccordionGroup>
+
+## Related Commands
+
+- `conda deactivate` - Deactivate the current environment
+- [`conda env list`](/commands/env-list) - List all available environments
+- [`conda create`](/commands/create) - Create a new environment
+- [`conda info`](/commands/info) - Display information about current environment

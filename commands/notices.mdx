@@ -1,0 +1,197 @@
+---
+title: conda notices
+description: Retrieve latest channel notifications
+---
+
+The `conda notices` command retrieves, caches, and displays notifications from conda channels. Channel maintainers can set messages that users will see, including informational messages and notices about channel stability.
+
+## Syntax
+
+```bash
+conda notices [options]
+```
+
+## Description
+
+Conda channel maintainers have the option of setting messages that users will see intermittently. Some of these notices are informational, while others are messages concerning the stability of the channel.
+
+When you run `conda notices`, conda will:
+1. Contact configured channels to retrieve notifications
+2. Cache the notifications locally
+3. Display any new or important notices
+
+## Options
+
+### `-c, --channel CHANNEL`
+Specify additional channels to retrieve notices from. Can be used multiple times.
+
+```bash
+# Get notices from defaults
+conda notices
+
+# Get notices from specific channel
+conda notices -c conda-forge
+
+# Get notices from multiple channels
+conda notices -c conda-forge -c bioconda
+```
+
+### `--json`
+Report all output as JSON. Suitable for programmatic use.
+
+```bash
+conda notices --json
+```
+
+## Common Use Cases
+
+### Retrieve notices from default channels
+
+Get notices from your configured channels:
+
+```bash
+conda notices
+```
+
+### Check specific channel for notices
+
+Query a particular channel for notifications:
+
+```bash
+conda notices -c defaults
+```
+
+### Check multiple channels
+
+Get notices from several channels at once:
+
+```bash
+conda notices -c defaults -c conda-forge -c bioconda
+```
+
+### Get JSON output for automation
+
+Extract notices programmatically:
+
+```bash
+conda notices --json
+```
+
+## Notice Types
+
+Channel notices may include:
+
+- **Informational messages**: General announcements about the channel
+- **Stability warnings**: Notices about channel maintenance or issues
+- **Security alerts**: Important security-related notifications
+- **Deprecation notices**: Warnings about deprecated packages or features
+- **Service updates**: Information about channel service changes
+
+## When Notices Are Displayed
+
+Notices are displayed:
+
+- When you explicitly run `conda notices`
+- Intermittently during other conda operations (if new notices are available)
+- Based on notice priority and your last check time
+
+<Note>
+Conda caches notices locally to avoid checking on every command. The cache is refreshed periodically.
+</Note>
+
+## Example Output
+
+Typical output might look like:
+
+```
+Channel Notices:
+
+[conda-forge]
+  Important: We will be performing maintenance on Saturday, Dec 15
+  from 10:00-12:00 UTC. Package installs may be slower during this time.
+
+[defaults]
+  New: Python 3.12 packages are now available in defaults channel!
+```
+
+## Automation and Scripting
+
+Use JSON output for scripts:
+
+```bash
+# Check for critical notices
+notices=$(conda notices --json)
+if echo "$notices" | grep -q "CRITICAL"; then
+    echo "Critical notice detected!"
+    echo "$notices"
+    exit 1
+fi
+```
+
+## Troubleshooting
+
+### Unable to retrieve notices
+
+If you see an error like:
+```
+CondaError: Unable to retrieve notices: [error details]
+```
+
+This could be due to:
+- Network connectivity issues
+- Channel server temporarily unavailable
+- Invalid channel configuration
+- Firewall or proxy blocking access
+
+**Solutions**:
+- Check your network connection
+- Verify channel URLs in your conda configuration
+- Check proxy settings if behind a corporate firewall
+- Try again later if the channel is experiencing issues
+
+### No notices displayed
+
+If no notices appear:
+- There may be no new notices from the channels
+- You may have already seen all current notices
+- The channels may not have any active notices configured
+
+## Configuration
+
+Notices behavior can be affected by your conda configuration:
+
+```bash
+# View your configured channels
+conda config --show channels
+
+# Add a channel
+conda config --add channels conda-forge
+
+# Remove a channel
+conda config --remove channels conda-forge
+```
+
+<Note>
+The `conda notices` command only retrieves notices from channels. It does not modify your environment or install packages.
+</Note>
+
+## Privacy and Security
+
+When you run `conda notices`:
+- Conda makes network requests to configured channel servers
+- No personal information is sent beyond standard HTTP headers
+- Notices are cached locally after retrieval
+- The command respects your proxy and network settings
+
+## Best Practices
+
+1. **Run periodically**: Check for notices regularly to stay informed about channel updates
+2. **Before critical operations**: Check notices before important package installations or updates
+3. **After adding channels**: Run after adding new channels to see their current notices
+4. **In CI/CD**: Include in automated workflows to catch important announcements
+
+```bash
+# Good practice in automation
+conda notices || echo "Warning: Could not retrieve notices"
+conda install package-name
+```

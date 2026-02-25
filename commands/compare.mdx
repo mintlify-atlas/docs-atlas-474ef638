@@ -1,0 +1,169 @@
+---
+title: conda compare
+description: Compare packages between conda environments
+---
+
+The `conda compare` command compares the packages installed in a conda environment with the packages specified in an environment file. This is useful for verifying that an environment matches its specification.
+
+## Syntax
+
+```bash
+conda compare [options] FILE
+```
+
+## Arguments
+
+### `FILE`
+Path to the environment file that is to be compared against. Can be a local file path or a URL.
+
+```bash
+conda compare environment.yml
+conda compare /path/to/environment.yml
+conda compare https://example.com/environment.yml
+```
+
+## Options
+
+### `-n, --name NAME`
+Name of the environment to compare.
+
+```bash
+conda compare -n myenv environment.yml
+```
+
+### `-p, --prefix PREFIX`
+Full path to the environment prefix to compare.
+
+```bash
+conda compare -p /path/to/env environment.yml
+```
+
+### `--json`
+Report all output as JSON. Suitable for programmatic use.
+
+```bash
+conda compare --json environment.yml
+```
+
+## Output
+
+The command returns:
+
+- **Exit code 0**: All packages in the specification file are present in the environment with matching version and build string
+- **Exit code 1**: One or more packages are missing or have mismatched versions
+
+### Success Output
+
+```
+Success. All the packages in the specification file are present in the environment with matching version and build string.
+```
+
+### Error Output
+
+When packages don't match, the output shows:
+- Missing packages: `<package_name> not found`
+- Mismatched packages: `<package_name> found but mismatch. Specification pkg: <spec>, Running pkg: <installed>`
+
+## Common Use Cases
+
+### Compare current environment with specification
+
+Compare packages in the current environment with an environment.yml file:
+
+```bash
+conda compare environment.yml
+```
+
+### Compare named environment with specification
+
+Compare a specific environment:
+
+```bash
+conda compare -n myenv environment.yml
+```
+
+### Compare environment with remote specification
+
+Fetch and compare against a remote environment file:
+
+```bash
+conda compare https://raw.githubusercontent.com/user/repo/main/environment.yml
+```
+
+### Use in CI/CD pipelines
+
+Verify that an environment matches its specification:
+
+```bash
+# Exit with error if environment doesn't match
+conda compare environment.yml || exit 1
+```
+
+### Get JSON output for automation
+
+```bash
+conda compare --json environment.yml > comparison_result.json
+```
+
+## How It Works
+
+The `conda compare` command:
+
+1. Reads the environment file (supports various formats via plugins)
+2. Extracts the list of requested packages from the specification
+3. Gets the list of installed packages in the target environment
+4. Compares each package from the specification against installed packages
+5. Checks that:
+   - The package exists in the environment
+   - The version matches the specification (if specified)
+   - The build string matches (if specified)
+
+<Note>
+The comparison uses conda's MatchSpec system, which supports flexible version specifications like `>=1.0`, `1.*`, etc.
+</Note>
+
+## Environment File Formats
+
+The command supports different environment file formats through conda's plugin system, including:
+
+- `environment.yml` (conda format)
+- `requirements.txt` (pip format)
+- Other formats via installed plugins
+
+## Example: Complete Workflow
+
+### Create environment from file
+
+```bash
+# Create environment from specification
+conda env create -f environment.yml -n myenv
+```
+
+### Verify environment matches specification
+
+```bash
+# Compare to verify installation
+conda compare -n myenv environment.yml
+```
+
+### Handle mismatches
+
+```bash
+# Update environment if comparison fails
+if ! conda compare -n myenv environment.yml; then
+    echo "Environment doesn't match specification, updating..."
+    conda env update -n myenv -f environment.yml
+fi
+```
+
+## Use Cases
+
+- **CI/CD validation**: Ensure environments in production match specifications
+- **Debugging**: Identify package version mismatches
+- **Documentation**: Verify environment documentation is up-to-date
+- **Reproducibility**: Confirm environments can be reproduced from files
+- **Compliance**: Check that environments meet specific requirements
+
+<Warning>
+The `conda compare` command checks packages specified in the environment file. It does not check for extra packages that may be installed but not specified in the file.
+</Warning>

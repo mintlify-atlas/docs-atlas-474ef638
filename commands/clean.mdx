@@ -1,0 +1,244 @@
+---
+title: conda clean
+description: Remove unused packages and caches
+---
+
+## Overview
+
+The `conda clean` command removes unused packages and caches to free up disk space. It can clean cached package tarballs, index files, unused packages, temporary files, and log files.
+
+## Syntax
+
+```bash
+conda clean [options]
+```
+
+## Removal Targets
+
+<ParamField path="-a, --all" type="boolean">
+  Remove index cache, lock files, unused cache packages, tarballs, and logfiles.
+</ParamField>
+
+<ParamField path="-i, --index-cache" type="boolean">
+  Remove index cache.
+</ParamField>
+
+<ParamField path="-p, --packages" type="boolean">
+  Remove unused packages from writable package caches. WARNING: This does not check for packages installed using symlinks back to the package cache.
+</ParamField>
+
+<ParamField path="-t, --tarballs" type="boolean">
+  Remove cached package tarballs.
+</ParamField>
+
+<ParamField path="-f, --force-pkgs-dirs" type="boolean">
+  Remove *all* writable package caches. This option is not included with the `--all` flag. WARNING: This will break environments with packages installed using symlinks back to the package cache.
+</ParamField>
+
+<ParamField path="-c, --tempfiles" type="string">
+  Remove temporary files that could not be deleted earlier due to being in-use. The argument is a path (or list of paths) to the environment(s) where the tempfiles should be found and removed.
+</ParamField>
+
+<ParamField path="-l, --logfiles" type="boolean">
+  Remove log files.
+</ParamField>
+
+## Output Options
+
+<ParamField path="--json" type="boolean">
+  Report all output as json. Suitable for using conda programmatically.
+</ParamField>
+
+<ParamField path="-v, --verbose" type="boolean">
+  Can be used multiple times. Once for detailed output, twice for INFO logging, thrice for DEBUG logging, four times for TRACE logging.
+</ParamField>
+
+<ParamField path="-q, --quiet" type="boolean">
+  Do not display progress bar.
+</ParamField>
+
+<ParamField path="-d, --dry-run" type="boolean">
+  Only display what would have been done.
+</ParamField>
+
+<ParamField path="-y, --yes" type="boolean">
+  Sets any confirmation values to 'yes' automatically. Users will not be asked to confirm any adding, deleting, backups, etc.
+</ParamField>
+
+## Examples
+
+<CodeGroup>
+```bash Clean tarballs
+conda clean --tarballs
+```
+
+```bash Clean all
+conda clean --all
+```
+
+```bash Clean index cache
+conda clean --index-cache
+```
+
+```bash Clean unused packages
+conda clean --packages
+```
+
+```bash Clean with dry run
+conda clean --all --dry-run
+```
+
+```bash Clean verbosely
+conda clean --all --verbose
+```
+
+```bash Clean with auto-confirm
+conda clean --all --yes
+```
+
+```bash Clean tempfiles in environment
+conda clean --tempfiles /path/to/env
+```
+
+```bash Clean logfiles
+conda clean --logfiles
+```
+
+```bash Clean multiple targets
+conda clean --tarballs --index-cache --logfiles
+```
+</CodeGroup>
+
+## Common Use Cases
+
+### Cleaning Everything
+
+Remove all cleanable items to maximize space savings:
+
+```bash
+conda clean --all
+```
+
+This removes:
+- Index cache
+- Lock files
+- Unused cache packages
+- Tarballs
+- Log files
+
+### Cleaning Package Tarballs
+
+Remove downloaded package archives (safe operation):
+
+```bash
+conda clean --tarballs
+```
+
+This frees space while keeping extracted packages intact.
+
+### Cleaning Unused Packages
+
+Remove packages not currently used by any environment:
+
+```bash
+conda clean --packages
+```
+
+### Cleaning Index Cache
+
+Remove cached channel index data:
+
+```bash
+conda clean --index-cache
+```
+
+The index will be rebuilt on the next conda operation.
+
+### Previewing Cleanup
+
+See what would be removed without actually removing:
+
+```bash
+conda clean --all --dry-run
+```
+
+### Cleaning with Details
+
+View exactly what is being removed:
+
+```bash
+conda clean --all --verbose
+```
+
+### Cleaning Temporary Files
+
+Remove leftover temporary files from a specific environment:
+
+```bash
+conda clean --tempfiles ~/anaconda3/envs/myenv
+```
+
+Or from multiple environments:
+
+```bash
+conda clean --tempfiles ~/anaconda3/envs/env1 --tempfiles ~/anaconda3/envs/env2
+```
+
+### Cleaning Log Files
+
+Remove conda operation logs:
+
+```bash
+conda clean --logfiles
+```
+
+### Combining Cleanup Operations
+
+Clean specific targets together:
+
+```bash
+conda clean --tarballs --index-cache --logfiles
+```
+
+### Automated Cleanup
+
+Clean without confirmation prompts (useful in scripts):
+
+```bash
+conda clean --all --yes
+```
+
+## Understanding Package Caches
+
+Conda maintains package caches to speed up environment creation and reduce downloads:
+
+- **Tarballs**: Compressed package archives as downloaded from channels
+- **Extracted packages**: Unpacked packages ready for linking into environments
+- **Index cache**: Cached channel metadata and package information
+
+### Safe vs. Risky Operations
+
+**Safe operations:**
+- `--tarballs`: Safe to remove; packages can be re-downloaded
+- `--index-cache`: Safe to remove; will be rebuilt automatically
+- `--logfiles`: Safe to remove; removes historical logs
+
+**Caution required:**
+- `--packages`: Generally safe but doesn't detect symlinked packages
+- `--force-pkgs-dirs`: DANGEROUS; can break environments using symlinks
+
+<Warning>
+  Using `--force-pkgs-dirs` will remove ALL package caches and will break environments that use symlinks to the package cache. Use with extreme caution.
+</Warning>
+
+<Note>
+  The `--packages` option removes unused packages but does not check for packages installed using symlinks. Most conda installations use hard links or copies, making this safe. However, verify your installation method before using.
+</Note>
+
+<Tip>
+  Run `conda clean --all --dry-run` regularly to see how much space you can reclaim without actually making changes.
+</Tip>
+
+<Info>
+  The `--all` flag does NOT include `--force-pkgs-dirs` for safety. You must explicitly use `--force-pkgs-dirs` if you want to remove all package caches.
+</Info>

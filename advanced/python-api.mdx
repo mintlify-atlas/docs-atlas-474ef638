@@ -1,0 +1,499 @@
+---
+title: Python API
+description: Using conda programmatically from Python code
+---
+
+Conda provides a Python API for programmatic access to its functionality. This allows you to integrate conda operations into your Python applications.
+
+<Warning>
+The Python API is currently in **Beta**. While in beta, expect both major and minor changes across minor releases. The API is defined in `conda/api.py`.
+</Warning>
+
+## When to Use the Python API
+
+Consider using the Python API when you need to:
+
+<CardGroup cols={2}>
+  <Card title="Programmatic Control" icon="code">
+    Integrate conda operations into Python scripts, tools, or applications
+  </Card>
+  
+  <Card title="Custom Tools" icon="wrench">
+    Build custom package managers or deployment tools
+  </Card>
+  
+  <Card title="Automation" icon="robot">
+    Automate environment management workflows
+  </Card>
+  
+  <Card title="Integration" icon="plug">
+    Integrate conda with CI/CD pipelines or other systems
+  </Card>
+</CardGroup>
+
+<Info>
+For simple scripting, consider using `conda` CLI commands with `subprocess` instead. The Python API is best suited for deep integration needs.
+</Info>
+
+## Core Components
+
+The conda Python API provides several high-level classes:
+
+### Solver
+
+From `conda/api.py:21`:
+
+```python
+class Solver:
+    """
+    A high-level API to conda's solving logic. Three public methods are provided
+    to access a solution in various forms.
+
+      * solve_final_state
+      * solve_for_diff
+      * solve_for_transaction
+    """
+
+    def __init__(
+        self, prefix, channels, subdirs=(), specs_to_add=(), specs_to_remove=()
+    ):
+        """
+        Args:
+            prefix (str): The conda prefix / environment location
+            channels (Sequence[Channel]): A prioritized list of channels
+            subdirs (Sequence[str]): A prioritized list of subdirs
+            specs_to_add (set[MatchSpec]): Package specs to add
+            specs_to_remove (set[MatchSpec]): Package specs to remove
+        """
+```
+
+<Tabs>
+  <Tab title="solve_final_state">
+    Returns the final, solved state of the environment.
+    
+    ```python
+    from conda.api import Solver
+    from conda.models.channel import Channel
+    
+    solver = Solver(
+        prefix="/path/to/env",
+        channels=[Channel("conda-forge"), Channel("defaults")],
+        specs_to_add=["numpy", "pandas"],
+    )
+    
+    # Get the solved package list
+    final_state = solver.solve_final_state()
+    
+    # final_state is a tuple of PackageRef in dependency order
+    for package in final_state:
+        print(f"{package.name} {package.version}")
+    ```
+  </Tab>
+  
+  <Tab title="solve_for_diff">
+    Returns packages to remove and packages to add.
+    
+    ```python
+    from conda.api import Solver
+    
+    solver = Solver(
+        prefix="/path/to/env",
+        channels=[Channel("conda-forge")],
+        specs_to_add=["scipy==1.11"],
+    )
+    
+    # Get the diff
+    to_remove, to_add = solver.solve_for_diff()
+    
+    print(f"Removing {len(to_remove)} packages")
+    print(f"Adding {len(to_add)} packages")
+    ```
+  </Tab>
+  
+  <Tab title="solve_for_transaction">
+    Returns an `UnlinkLinkTransaction` that can execute the solution.
+    
+    ```python
+    from conda.api import Solver
+    
+    solver = Solver(
+        prefix="/path/to/env",
+        channels=[Channel("defaults")],
+        specs_to_add=["python=3.11"],
+    )
+    
+    # Get the transaction
+    transaction = solver.solve_for_transaction()
+    
+    # Execute the transaction
+    transaction.execute()
+    ```
+  </Tab>
+</Tabs>
+
+### Solver Modifiers
+
+From `conda/api.py:14`:
+
+```python
+DepsModifier = _DepsModifier
+"""Flags to enable alternate handling of dependencies."""
+
+UpdateModifier = _UpdateModifier
+"""Flags to enable alternate handling for updates of existing packages."""
+```
+
+<AccordionGroup>
+  <Accordion title="DepsModifier Options">
+    Control how dependencies are handled:
+    
+    - `NO_DEPS`: Don't install dependencies
+    - `ONLY_DEPS`: Only install dependencies, not the package itself
+    - `UPDATE_DEPS`: Update all dependencies to latest versions
+    - `UPDATE_DEPS_ONLY_DEPS`: Update dependencies but not the main package
+    - `FREEZE_INSTALLED`: Don't update any installed packages
+    
+    ```python
+    from conda.api import Solver, DepsModifier
+    
+    solver = Solver(prefix="/path/to/env", ...)
+    result = solver.solve_final_state(
+        deps_modifier=DepsModifier.UPDATE_DEPS
+    )
+    ```
+  </Accordion>
+  
+  <Accordion title="Additional Parameters">
+    - `prune` (bool): Remove packages no longer needed as dependencies
+    - `ignore_pinned` (bool): Ignore pinned package configuration
+    - `force_remove` (bool): Remove packages without checking dependents
+    - `force_reinstall` (bool): Reinstall even if already satisfied
+  </Accordion>
+</AccordionGroup>
+
+### SubdirData
+
+From `conda/api.py:191`:
+
+```python
+class SubdirData:
+    """
+    High-level management and usage of repodata.json for subdirs.
+    """
+
+    def __init__(self, channel):
+        """
+        Args:
+            channel (str or Channel): The target subdir
+        """
+```
+
+<CodeGroup>
+```python Query Packages
+from conda.api import SubdirData
+from conda.models.channel import Channel
+
+# Initialize for a specific channel and platform
+subdir = SubdirData(Channel("conda-forge/linux-64"))
+
+# Query for packages matching a spec
+packages = subdir.query("numpy>=1.20")
+for pkg in packages:
+    print(f"{pkg.name} {pkg.version}")
+```
+
+```python Query All Channels
+from conda.api import SubdirData
+
+# Query across all configured channels
+packages = SubdirData.query_all(
+    "pandas",
+    channels=["conda-forge", "defaults"],
+    subdirs=["linux-64", "noarch"],
+)
+
+print(f"Found {len(packages)} matching packages")
+```
+
+```python Iterate Records
+from conda.api import SubdirData
+
+# Iterate over all packages in a subdir
+subdir = SubdirData("https://repo.anaconda.com/pkgs/main/linux-64")
+
+for record in subdir.iter_records():
+    print(f"{record.name} {record.version}")
+```
+</CodeGroup>
+
+### PackageCacheData
+
+From `conda/api.py:284`:
+
+```python
+class PackageCacheData:
+    """
+    High-level management and usage of package caches.
+    """
+
+    def __init__(self, pkgs_dir):
+        """
+        Args:
+            pkgs_dir (str): Path to the package cache directory
+        """
+```
+
+<Tabs>
+  <Tab title="Query Cache">
+    ```python
+    from conda.api import PackageCacheData
+    
+    cache = PackageCacheData("/path/to/pkgs")
+    
+    # Query for packages in cache
+    cached_packages = cache.query("numpy")
+    
+    for pkg in cached_packages:
+        print(f"{pkg.name} {pkg.version} - {pkg.package_tarball_full_path}")
+    ```
+  </Tab>
+  
+  <Tab title="Query All Caches">
+    ```python
+    from conda.api import PackageCacheData
+    
+    # Query all configured package caches
+    packages = PackageCacheData.query_all("scipy>=1.0")
+    
+    print(f"Found in cache: {len(packages)} packages")
+    ```
+  </Tab>
+  
+  <Tab title="Find Writable Cache">
+    ```python
+    from conda.api import PackageCacheData
+    
+    # Get the first writable package cache
+    writable_cache = PackageCacheData.first_writable()
+    
+    print(f"Writable cache: {writable_cache._internal.pkgs_dir}")
+    print(f"Is writable: {writable_cache.is_writable}")
+    ```
+  </Tab>
+</Tabs>
+
+### PrefixData
+
+From `conda/api.py:412`:
+
+```python
+class PrefixData:
+    """
+    High-level management and usage of conda environment prefixes.
+    """
+
+    def __init__(self, prefix_path):
+        """
+        Args:
+            prefix_path (str): Path to the conda environment
+        """
+```
+
+<CodeGroup>
+```python List Installed Packages
+from conda.api import PrefixData
+
+# Get information about an environment
+prefix = PrefixData("/path/to/env")
+
+# Iterate over installed packages
+for record in prefix.iter_records():
+    print(f"{record.name} {record.version}")
+```
+
+```python Query Installed Package
+from conda.api import PrefixData
+from conda.models.match_spec import MatchSpec
+
+prefix = PrefixData("/path/to/env")
+
+# Check if a specific package is installed
+packages = prefix.query("python>=3.10")
+
+if packages:
+    pkg = packages[0]
+    print(f"Python {pkg.version} is installed")
+else:
+    print("No matching Python version found")
+```
+
+```python Check Environment Writability
+from conda.api import PrefixData
+
+prefix = PrefixData("/path/to/env")
+
+if prefix.is_writable:
+    print("Environment is writable")
+else:
+    print("Environment is read-only")
+```
+</CodeGroup>
+
+## Complete Example
+
+Here's a complete example that creates an environment programmatically:
+
+```python
+from conda.api import Solver
+from conda.models.channel import Channel
+from conda.base.context import context
+import os
+
+def create_environment(env_path, packages, channels=None):
+    """
+    Create a new conda environment programmatically.
+    
+    Args:
+        env_path: Path where the environment will be created
+        packages: List of package specs (e.g., ["python=3.11", "numpy"])
+        channels: List of channel names (defaults to context.channels)
+    """
+    # Use default channels if none specified
+    if channels is None:
+        channels = context.channels
+    
+    # Convert channel names to Channel objects
+    channel_objs = [Channel(c) for c in channels]
+    
+    # Create solver
+    solver = Solver(
+        prefix=env_path,
+        channels=channel_objs,
+        subdirs=context.subdirs,
+        specs_to_add=packages,
+    )
+    
+    # Solve and create transaction
+    print(f"Solving environment for {len(packages)} packages...")
+    transaction = solver.solve_for_transaction()
+    
+    # Display what will be installed
+    print(f"\nWill install {len(transaction.link_precs)} packages:")
+    for pkg in transaction.link_precs[:5]:  # Show first 5
+        print(f"  - {pkg.name} {pkg.version}")
+    if len(transaction.link_precs) > 5:
+        print(f"  ... and {len(transaction.link_precs) - 5} more")
+    
+    # Execute the transaction
+    print("\nExecuting transaction...")
+    transaction.execute()
+    
+    print(f"\nEnvironment created at: {env_path}")
+
+# Example usage
+if __name__ == "__main__":
+    env_path = os.path.expanduser("~/my-conda-env")
+    packages = ["python=3.11", "numpy", "pandas", "matplotlib"]
+    channels = ["conda-forge", "defaults"]
+    
+    create_environment(env_path, packages, channels)
+```
+
+## Working with Context
+
+<Info>
+The `context` object provides access to conda's configuration.
+</Info>
+
+```python
+from conda.base.context import context
+
+# Access configuration
+print(f"Channels: {context.channels}")
+print(f"Subdirs: {context.subdirs}")
+print(f"Package cache: {context.pkgs_dirs}")
+print(f"Environment directories: {context.envs_dirs}")
+
+# Check features
+print(f"Offline mode: {context.offline}")
+print(f"JSON output: {context.json}")
+print(f"Verbosity: {context.verbosity}")
+```
+
+## Error Handling
+
+Import conda exceptions for proper error handling:
+
+```python
+from conda.exceptions import (
+    PackagesNotFoundError,
+    UnsatisfiableError,
+    EnvironmentLocationNotFound,
+    CondaError,
+)
+from conda.api import Solver
+
+try:
+    solver = Solver(
+        prefix="/path/to/env",
+        channels=[Channel("conda-forge")],
+        specs_to_add=["nonexistent-package"],
+    )
+    result = solver.solve_final_state()
+    
+except PackagesNotFoundError as e:
+    print(f"Package not found: {e}")
+except UnsatisfiableError as e:
+    print(f"Cannot satisfy dependencies: {e}")
+except EnvironmentLocationNotFound as e:
+    print(f"Environment not found: {e}")
+except CondaError as e:
+    print(f"Conda error: {e}")
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Context" icon="gear">
+    Leverage the `context` object for configuration instead of hardcoding values.
+  </Card>
+  
+  <Card title="Handle Errors" icon="shield">
+    Always catch and handle conda exceptions appropriately.
+  </Card>
+  
+  <Card title="Test Offline" icon="wifi-slash">
+    Test your code with `context.offline = True` to ensure it handles offline scenarios.
+  </Card>
+  
+  <Card title="Reload Data" icon="arrows-rotate">
+    Use `.reload()` methods sparingly - only when you know data is stale.
+  </Card>
+</CardGroup>
+
+<Warning>
+The Python API runs in the same process as your application. Be cautious of:
+- Global state modifications
+- Signal handlers
+- Thread safety (conda operations are not thread-safe)
+</Warning>
+
+## API Reference
+
+For detailed API documentation, see:
+
+<Card title="API Reference" icon="book" href="/api/overview">
+  Complete reference documentation for all Python API classes and methods
+</Card>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Plugin Development" icon="plug" href="/advanced/plugins">
+    Learn how to extend conda with plugins
+  </Card>
+  
+  <Card title="CLI Reference" icon="terminal" href="/commands/overview">
+    Command-line interface reference
+  </Card>
+</CardGroup>

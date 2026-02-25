@@ -1,0 +1,260 @@
+---
+title: conda list
+description: List installed packages in a conda environment
+---
+
+## Overview
+
+The `conda list` command lists all packages installed into a conda environment. It can display packages in various formats and can be filtered by regular expressions.
+
+## Syntax
+
+```bash
+conda list [options] [regex]
+```
+
+## Target Environment Specification
+
+<ParamField path="-n, --name" type="string">
+  Name of environment.
+</ParamField>
+
+<ParamField path="-p, --prefix" type="string">
+  Full path to environment location (i.e. prefix).
+</ParamField>
+
+## Filtering
+
+<ParamField path="regex" type="string">
+  List only packages matching this regular expression.
+</ParamField>
+
+<ParamField path="-f, --full-name" type="boolean">
+  Only search for full names, i.e., `^<regex>$`. `--full-name NAME` is identical to regex `^NAME$`.
+</ParamField>
+
+## Output Format Options
+
+<ParamField path="--fields" type="string">
+  Comma-separated list of fields to print. Valid values include: name, version, build, channel, size, etc.
+</ParamField>
+
+<ParamField path="--reverse" type="boolean">
+  List installed packages in reverse order.
+</ParamField>
+
+<ParamField path="-c, --canonical" type="boolean">
+  Output canonical names of packages only.
+</ParamField>
+
+<ParamField path="--explicit" type="boolean">
+  List explicitly all installed conda packages with URL (output may be used by `conda create --file`).
+</ParamField>
+
+<ParamField path="--md5" type="boolean">
+  Add MD5 hashsum when using `--explicit`.
+</ParamField>
+
+<ParamField path="--sha256" type="boolean">
+  Add SHA256 hashsum when using `--explicit`.
+</ParamField>
+
+<ParamField path="-e, --export" type="boolean">
+  Output explicit, machine-readable requirement strings instead of human-readable lists of packages. This output may be used by `conda create --file`.
+</ParamField>
+
+<ParamField path="-r, --revisions" type="boolean">
+  List the revision history.
+</ParamField>
+
+<ParamField path="--size" type="boolean">
+  Show package and environment sizes.
+</ParamField>
+
+<ParamField path="--show-channel-urls" type="boolean">
+  Show channel urls. Overrides the value given by `conda config --show show_channel_urls`.
+</ParamField>
+
+## Package Source Options
+
+<ParamField path="--no-pip" type="boolean">
+  Do not include pip-only installed packages.
+</ParamField>
+
+<ParamField path="--auth" type="boolean">
+  In explicit mode, leave authentication details in package URLs. They are removed by default otherwise.
+</ParamField>
+
+## Output Options
+
+<ParamField path="--json" type="boolean">
+  Report all output as json. Suitable for using conda programmatically.
+</ParamField>
+
+<ParamField path="-v, --verbose" type="boolean">
+  Can be used multiple times. Once for detailed output, twice for INFO logging, thrice for DEBUG logging, four times for TRACE logging.
+</ParamField>
+
+<ParamField path="-q, --quiet" type="boolean">
+  Do not display progress bar.
+</ParamField>
+
+## Examples
+
+<CodeGroup>
+```bash List all packages
+conda list
+```
+
+```bash List in specific environment
+conda list -n myenv
+```
+
+```bash List in reverse order
+conda list --reverse
+```
+
+```bash List packages starting with 'py'
+conda list ^py
+```
+
+```bash Show only name and version
+conda list --fields name,version
+```
+
+```bash Export package list
+conda list --export > package-list.txt
+```
+
+```bash List with explicit URLs
+conda list --explicit > environment.txt
+```
+
+```bash Show package sizes
+conda list --size
+```
+
+```bash List in JSON format
+conda list --json
+```
+
+```bash View revision history
+conda list --revisions
+```
+
+```bash List with MD5 hashes
+conda list --explicit --md5
+```
+
+```bash Filter by full name
+conda list -f numpy
+```
+</CodeGroup>
+
+## Common Use Cases
+
+### Listing All Packages
+
+Display all packages in the current environment:
+
+```bash
+conda list
+```
+
+### Searching for Specific Packages
+
+Use regex to find packages matching a pattern:
+
+```bash
+conda list ^python
+```
+
+This lists all packages starting with "python".
+
+### Exporting Package List
+
+Create a requirements file for environment recreation:
+
+```bash
+conda list --export > requirements.txt
+```
+
+Reinstall from the export:
+
+```bash
+conda create -n myenv --file requirements.txt
+```
+
+### Creating Explicit Specification
+
+Generate an explicit specification file with URLs:
+
+```bash
+conda list --explicit > environment.txt
+```
+
+Recreate environment from explicit file:
+
+```bash
+conda create -n myenv --file environment.txt
+```
+
+### Viewing Package Sizes
+
+Check how much space packages are using:
+
+```bash
+conda list --size
+```
+
+### Listing Specific Fields
+
+Customize output to show only certain fields:
+
+```bash
+conda list --fields name,version,channel
+```
+
+### Checking Revision History
+
+View environment changes over time:
+
+```bash
+conda list --revisions
+```
+
+### Filtering by Environment
+
+List packages in a specific environment:
+
+```bash
+conda list -n production
+```
+
+### Machine-Readable Output
+
+Get JSON output for programmatic processing:
+
+```bash
+conda list --json > packages.json
+```
+
+### Excluding Pip Packages
+
+List only conda-installed packages:
+
+```bash
+conda list --no-pip
+```
+
+<Note>
+  The `--explicit` format includes full URLs for each package, making it ideal for exact environment reproduction across systems.
+</Note>
+
+<Info>
+  Use `--export` format for lighter-weight package lists that still allow environment recreation. The explicit format is more robust but creates larger files.
+</Info>
+
+<Tip>
+  Combine `--fields` with `--json` for programmatic parsing of specific package information.
+</Tip>

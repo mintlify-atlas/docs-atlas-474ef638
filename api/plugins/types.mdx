@@ -1,0 +1,1065 @@
+---
+title: Plugin Types
+description: Complete reference of all plugin type definitions and their fields
+---
+
+## Overview
+
+Plugin types are dataclass definitions that specify the structure and requirements for each plugin hook. Every plugin hook returns an iterable of these typed objects.
+
+<Note>
+  All plugin types inherit from `CondaPlugin` base class which provides name validation and normalization.
+</Note>
+
+## Base Classes
+
+### CondaPlugin
+
+Base class for all conda plugins.
+
+**Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | `str` | User-facing plugin name (automatically lowercased and stripped) |
+
+**Usage:**
+
+```python
+from conda.plugins.types import CondaPlugin
+
+@dataclass
+class MyPlugin(CondaPlugin):
+    name: str
+    # additional fields...
+```
+
+<Warning>
+  Plugin names are automatically normalized to lowercase and stripped of whitespace. Invalid names raise `PluginError`.
+</Warning>
+
+---
+
+## Plugin Type Definitions
+
+### CondaSubcommand
+
+Defines a conda subcommand plugin.
+
+**Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `str` | Yes | Subcommand name (e.g., `conda my-subcommand`) |
+| `summary` | `str` | Yes | Short description shown in `conda --help` |
+| `action` | `Callable` | Yes | Function executed when subcommand is invoked |
+| `configure_parser` | `Callable` | No | Function to configure argparse parser |
+
+**Action Signature:**
+
+```python
+def action(args: Namespace | tuple[str]) -> int | None:
+    # Command implementation
+    return 0  # exit code
+```
+
+**Parser Configuration Signature:**
+
+```python
+def configure_parser(parser: ArgumentParser) -> None:
+    parser.add_argument('--my-option', help='My option')
+```
+
+**Example:**
+
+```python
+from conda import plugins
+from argparse import ArgumentParser
+
+
+def my_command(args):
+    print(f"Running with option: {args.my_option}")
+    return 0
+
+
+def configure_my_parser(parser: ArgumentParser):
+    parser.add_argument(
+        '--my-option',
+        default='default',
+        help='An example option'
+    )
+
+
+@plugins.hookimpl
+def conda_subcommands():
+    yield plugins.types.CondaSubcommand(
+        name="my-command",
+        summary="An example subcommand",
+        action=my_command,
+        configure_parser=configure_my_parser,
+    )
+```
+
+---
+
+### CondaVirtualPackage
+
+Defines a virtual package representing system capabilities.
+
+**Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `str` | Yes | Virtual package name (e.g., `my_custom_os`) |
+| `version` | `str | None | Callable` | Yes | Package version or callable returning version |
+| `build` | `str | None | Callable` | Yes | Build string or callable returning build |
+| `override_entity` | `"version" | "build" | None` | No | Which field can be overridden via environment variable |
+| `empty_override` | `None | NULL` | No | Value when override is empty string (default: `NULL`) |
+| `version_validation` | `Callable` | No | Optional version validation function |
+
+**Example (Static Values):**
+
+```python
+from conda import plugins
+
+
+@plugins.hookimpl
+def conda_virtual_packages():
+    yield plugins.types.CondaVirtualPackage(
+        name="my_os",
+        version="10.5.0",
+        build="x86_64",
+    )
+```
+
+**Example (Dynamic Values):**
+
+```python
+from conda import plugins
+import platform
+
+
+def get_os_version():
+    return platform.release()
+
+
+def get_arch():
+    return platform.machine()
+
+
+@plugins.hookimpl
+def conda_virtual_packages():
+    yield plugins.types.CondaVirtualPackage(
+        name="my_os",
+        version=get_os_version,
+        build=get_arch,
+    )
+```
+
+**Example (With Override):**
+
+```python
+from conda import plugins
+
+
+@plugins.hookimpl
+def conda_virtual_packages():
+    yield plugins.types.CondaVirtualPackage(
+        name="cuda",
+        version="11.8",
+        build="0",
+        override_entity="version",  # Allow CONDA_OVERRIDE_CUDA env var
+    )
+```
+
+<Accordion title="Environment Variable Overrides">
+  When `override_entity` is set, users can override the value using:
+  
+  - Environment variable: `CONDA_OVERRIDE_{name}` (uppercase)
+  - Config setting: `context.override_virtual_packages[name]`
+  
+  Example: `CONDA_OVERRIDE_CUDA=12.0 conda install ...`
+</Accordion>
+
+---
+
+### CondaSolver
+
+Defines a custom solver implementation.
+
+**Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `str` | Yes | Solver name (e.g., `custom-solver`) |
+| `backend` | `type[Solver]` | Yes | Solver class (must inherit from `conda.core.solve.Solver`) |
+
+**Example:**
+
+```python
+from conda import plugins
+from conda.core.solve import Solver
+
+
+class MySolver(Solver):
+    def solve_final_state(self, *args, **kwargs):
+        # Custom solving logic
+        return super().solve_final_state(*args, **kwargs)
+
+
+@plugins.hookimpl
+def conda_solvers():
+    yield plugins.types.CondaSolver(
+        name="my-solver",
+        backend=MySolver,
+    )
+```
+
+---
+
+### CondaPreCommand
+
+Defines a pre-command hook.
+
+**Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `str` | Yes | Pre-command identifier |
+| `action` | `Callable[[str], None]` | Yes | Function to execute before commands |
+| `run_for` | `set[str]` | Yes | Set of command names to trigger on |
+
+**Example:**
+
+```python
+from conda import plugins
+
+
+def validate_environment(command: str):
+    print(f"Running pre-command validation for: {command}")
+    # Perform validation...
+
+
+@plugins.hookimpl
+def conda_pre_commands():
+    yield plugins.types.CondaPreCommand(
+        name="env-validator",
+        action=validate_environment,
+        run_for={"install", "update", "create"},
+    )
+```
+
+---
+
+### CondaPostCommand
+
+Defines a post-command hook.
+
+**Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `str` | Yes | Post-command identifier |
+| `action` | `Callable[[str], None]` | Yes | Function to execute after commands |
+| `run_for` | `set[str]` | Yes | Set of command names to trigger on |
+
+**Example:**
+
+```python
+from conda import plugins
+
+
+def report_metrics(command: str):
+    print(f"Reporting metrics for: {command}")
+    # Send metrics...
+
+
+@plugins.hookimpl
+def conda_post_commands():
+    yield plugins.types.CondaPostCommand(
+        name="metrics-reporter",
+        action=report_metrics,
+        run_for={"install", "remove"},
+    )
+```
+
+---
+
+### CondaAuthHandler
+
+Defines a custom authentication handler.
+
+**Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `str` | Yes | Auth handler identifier |
+| `handler` | `type[ChannelAuthBase]` | Yes | Auth handler class (must inherit from `ChannelAuthBase`) |
+
+**Example:**
+
+```python
+from conda import plugins
+from conda.plugins.types import ChannelAuthBase
+
+
+class TokenAuth(ChannelAuthBase):
+    def __init__(self, channel_name: str, token: str):
+        super().__init__(channel_name)
+        self.token = token
+
+    def __call__(self, request):
+        request.headers["Authorization"] = f"Bearer {self.token}"
+        return request
+
+
+@plugins.hookimpl
+def conda_auth_handlers():
+    yield plugins.types.CondaAuthHandler(
+        name="token-auth",
+        handler=TokenAuth,
+    )
+```
+
+---
+
+### CondaHealthCheck
+
+Defines a health check for conda doctor.
+
+**Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `str` | Yes | Health check identifier |
+| `action` | `Callable[[str, bool], None]` | Yes | Check function (receives prefix and verbose flag) |
+| `fixer` | `Callable` | No | Optional fix function |
+| `summary` | `str` | No | Short description of the check |
+| `fix` | `str` | No | Short description of the fix |
+
+**Fixer Signature:**
+
+```python
+def fixer(prefix: str, args: Namespace, confirm: ConfirmCallback) -> int:
+    # Fix implementation
+    return 0  # exit code
+```
+
+**Example:**
+
+```python
+from conda import plugins
+from conda.plugins.types import ConfirmCallback
+from argparse import Namespace
+
+
+def check_permissions(prefix: str, verbose: bool):
+    if verbose:
+        print(f"Checking permissions in {prefix}")
+    # Check logic...
+
+
+def fix_permissions(prefix: str, args: Namespace, confirm: ConfirmCallback) -> int:
+    issues = []  # Find issues...
+    
+    if not issues:
+        print("No permission issues found")
+        return 0
+    
+    confirm(f"Fix {len(issues)} permission issues?")
+    # Perform fixes...
+    return 0
+
+
+@plugins.hookimpl
+def conda_health_checks():
+    yield plugins.types.CondaHealthCheck(
+        name="permissions",
+        action=check_permissions,
+        fixer=fix_permissions,
+        summary="Check file permissions",
+        fix="Fix incorrect permissions",
+    )
+```
+
+---
+
+### CondaPreSolve
+
+Defines a pre-solve hook.
+
+**Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `str` | Yes | Pre-solve identifier |
+| `action` | `Callable` | Yes | Function called before solving |
+
+**Action Signature:**
+
+```python
+def action(
+    specs_to_add: frozenset[MatchSpec],
+    specs_to_remove: frozenset[MatchSpec]
+) -> None:
+    pass
+```
+
+**Example:**
+
+```python
+from conda import plugins
+from conda.models.match_spec import MatchSpec
+
+
+def log_solve_input(
+    specs_to_add: frozenset[MatchSpec],
+    specs_to_remove: frozenset[MatchSpec]
+):
+    print(f"Solving with {len(specs_to_add)} additions")
+    print(f"Removing {len(specs_to_remove)} packages")
+
+
+@plugins.hookimpl
+def conda_pre_solves():
+    yield plugins.types.CondaPreSolve(
+        name="solve-logger",
+        action=log_solve_input,
+    )
+```
+
+---
+
+### CondaPostSolve
+
+Defines a post-solve hook.
+
+**Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `str` | Yes | Post-solve identifier |
+| `action` | `Callable` | Yes | Function called after solving |
+
+**Action Signature:**
+
+```python
+def action(
+    repodata_fn: str,
+    unlink_precs: tuple[PackageRecord, ...],
+    link_precs: tuple[PackageRecord, ...]
+) -> None:
+    pass
+```
+
+**Example:**
+
+```python
+from conda import plugins
+from conda.models.records import PackageRecord
+
+
+def analyze_solve_result(
+    repodata_fn: str,
+    unlink_precs: tuple[PackageRecord, ...],
+    link_precs: tuple[PackageRecord, ...]
+):
+    print(f"Repodata: {repodata_fn}")
+    print(f"Packages to unlink: {len(unlink_precs)}")
+    print(f"Packages to link: {len(link_precs)}")
+
+
+@plugins.hookimpl
+def conda_post_solves():
+    yield plugins.types.CondaPostSolve(
+        name="solve-analyzer",
+        action=analyze_solve_result,
+    )
+```
+
+---
+
+### CondaSetting
+
+Defines a custom configuration setting.
+
+**Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `str` | Yes | Setting name |
+| `description` | `str` | Yes | User-facing description |
+| `parameter` | `Parameter` | Yes | Parameter definition (e.g., `PrimitiveParameter`) |
+| `aliases` | `tuple[str, ...]` | No | Alternative names for the setting |
+
+**Example:**
+
+```python
+from conda import plugins
+from conda.common.configuration import PrimitiveParameter, SequenceParameter
+
+
+@plugins.hookimpl
+def conda_settings():
+    # String setting
+    yield plugins.types.CondaSetting(
+        name="my_api_key",
+        description="API key for my service",
+        parameter=PrimitiveParameter("", element_type=str),
+        aliases=("my_key",),
+    )
+    
+    # List setting
+    yield plugins.types.CondaSetting(
+        name="my_servers",
+        description="List of server URLs",
+        parameter=SequenceParameter([], element_type=str),
+    )
+```
+
+---
+
+### CondaReporterBackend
+
+Defines a custom output reporter.
+
+**Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `str` | Yes | Reporter backend name |
+| `description` | `str` | Yes | Short description |
+| `renderer` | `type[ReporterRendererBase]` | Yes | Renderer implementation |
+
+**Example:**
+
+```python
+from conda import plugins
+from conda.plugins.types import (
+    ReporterRendererBase,
+    ProgressBarBase,
+    SpinnerBase,
+)
+
+
+class MyRenderer(ReporterRendererBase):
+    def detail_view(self, data, **kwargs):
+        return str(data)
+    
+    def envs_list(self, data, **kwargs):
+        return "\n".join(data)
+    
+    def progress_bar(self, description, **kwargs):
+        return MyProgressBar(description)
+    
+    def spinner(self, message, failed_message):
+        return MySpinner(message, failed_message)
+    
+    def prompt(self, message="Proceed", choices=("yes", "no"), default="yes"):
+        return input(f"{message} [{'/'.join(choices)}]? ")
+
+
+class MyProgressBar(ProgressBarBase):
+    def update_to(self, fraction):
+        pass
+    
+    def refresh(self):
+        pass
+    
+    def close(self):
+        pass
+
+
+class MySpinner(SpinnerBase):
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+
+@plugins.hookimpl
+def conda_reporter_backends():
+    yield plugins.types.CondaReporterBackend(
+        name="my-reporter",
+        description="Custom reporter implementation",
+        renderer=MyRenderer,
+    )
+```
+
+---
+
+### CondaRequestHeader
+
+Defines a custom HTTP request header.
+
+**Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `str` | Yes | HTTP header name |
+| `value` | `str` | Yes | HTTP header value |
+
+**Example:**
+
+```python
+from conda import plugins
+
+
+@plugins.hookimpl
+def conda_session_headers(host: str):
+    if host == "my-channel.com":
+        yield plugins.types.CondaRequestHeader(
+            name="X-API-Version",
+            value="v2",
+        )
+        yield plugins.types.CondaRequestHeader(
+            name="X-Client",
+            value="conda-plugin",
+        )
+```
+
+---
+
+### CondaPreTransactionAction
+
+Defines a pre-transaction action.
+
+**Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `str` | Yes | Action identifier |
+| `action` | `type[Action]` | Yes | Action class (must inherit from `conda.core.path_actions.Action`) |
+
+**Example:**
+
+```python
+from conda import plugins
+from conda.core.path_actions import Action
+
+
+class BackupAction(Action):
+    def verify(self):
+        self._verified = True
+    
+    def execute(self):
+        print(f"Backing up {self.target_prefix}")
+        # Backup logic...
+    
+    def reverse(self):
+        print("Restoring from backup")
+        # Restore logic...
+    
+    def cleanup(self):
+        print("Cleaning up backup")
+
+
+@plugins.hookimpl
+def conda_pre_transaction_actions():
+    yield plugins.types.CondaPreTransactionAction(
+        name="backup",
+        action=BackupAction,
+    )
+```
+
+---
+
+### CondaPostTransactionAction
+
+Defines a post-transaction action.
+
+**Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `str` | Yes | Action identifier |
+| `action` | `type[Action]` | Yes | Action class (must inherit from `conda.core.path_actions.Action`) |
+
+**Example:**
+
+```python
+from conda import plugins
+from conda.core.path_actions import Action
+
+
+class NotifyAction(Action):
+    def verify(self):
+        self._verified = True
+    
+    def execute(self):
+        print("Sending notification...")
+        # Notification logic...
+    
+    def reverse(self):
+        pass  # Nothing to reverse
+    
+    def cleanup(self):
+        pass
+
+
+@plugins.hookimpl
+def conda_post_transaction_actions():
+    yield plugins.types.CondaPostTransactionAction(
+        name="notify",
+        action=NotifyAction,
+    )
+```
+
+---
+
+### CondaPrefixDataLoader
+
+Defines a custom prefix data loader.
+
+**Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `str` | Yes | Loader identifier |
+| `loader` | `CondaPrefixDataLoaderCallable` | Yes | Loader function |
+
+**Loader Signature:**
+
+```python
+def loader(
+    prefix: PathType,
+    records: dict[str, PrefixRecord]
+) -> dict[str, PrefixRecord]:
+    # Load and return new records
+    pass
+```
+
+**Example:**
+
+```python
+from pathlib import Path
+from conda import plugins
+from conda.common.path import PathType
+from conda.models.records import PrefixRecord
+
+
+def load_npm_packages(
+    prefix: PathType,
+    records: dict[str, PrefixRecord]
+) -> dict[str, PrefixRecord]:
+    npm_records = {}
+    node_modules = Path(prefix) / "node_modules"
+    
+    if node_modules.exists():
+        for package_dir in node_modules.iterdir():
+            if package_dir.is_dir():
+                # Parse package.json and create PrefixRecord
+                npm_records[package_dir.name] = PrefixRecord(
+                    name=package_dir.name,
+                    version="1.0.0",
+                    build_number=0,
+                    build="npm",
+                )
+    
+    records.update(npm_records)
+    return npm_records
+
+
+@plugins.hookimpl
+def conda_prefix_data_loaders():
+    yield plugins.types.CondaPrefixDataLoader(
+        name="npm-loader",
+        loader=load_npm_packages,
+    )
+```
+
+---
+
+### CondaEnvironmentSpecifier
+
+<Warning>
+  **EXPERIMENTAL** - This API may change in future releases.
+</Warning>
+
+Defines a custom environment specification format.
+
+**Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `str` | Yes | Specifier name |
+| `environment_spec` | `type[EnvironmentSpecBase]` | Yes | Spec parser class |
+
+**Example:**
+
+```python
+import json
+from conda import plugins
+from conda.plugins.types import EnvironmentSpecBase
+from conda.env.env import Environment
+
+
+class JsonSpec(EnvironmentSpecBase):
+    def __init__(self, filename: str):
+        self.filename = filename
+    
+    def can_handle(self) -> bool:
+        return self.filename.endswith('.json')
+    
+    @property
+    def env(self) -> Environment:
+        with open(self.filename) as f:
+            data = json.load(f)
+        return Environment(
+            name=data['name'],
+            channels=data.get('channels', []),
+            dependencies=data.get('dependencies', []),
+        )
+
+
+@plugins.hookimpl
+def conda_environment_specifiers():
+    yield plugins.types.CondaEnvironmentSpecifier(
+        name="json",
+        environment_spec=JsonSpec,
+    )
+```
+
+---
+
+### CondaEnvironmentExporter
+
+Defines a custom environment export format.
+
+**Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `str` | Yes | Exporter name |
+| `aliases` | `tuple[str, ...]` | Yes | Format aliases (e.g., `("yaml", "yml")`) |
+| `default_filenames` | `tuple[str, ...]` | Yes | Default filenames (e.g., `("environment.yml",)`) |
+| `export` | `SinglePlatformEnvironmentExport` | No* | Single-platform export function |
+| `multiplatform_export` | `MultiPlatformEnvironmentExport` | No* | Multi-platform export function |
+
+*Exactly one of `export` or `multiplatform_export` must be provided.
+
+**Export Signature:**
+
+```python
+def export(env: Environment) -> str:
+    # Return serialized environment
+    pass
+```
+
+**Example:**
+
+```python
+import json
+from conda import plugins
+from conda.models.environment import Environment
+
+
+def export_json(env: Environment) -> str:
+    data = {
+        "name": env.name,
+        "channels": env.channels,
+        "dependencies": [str(dep) for dep in env.dependencies],
+    }
+    return json.dumps(data, indent=2)
+
+
+@plugins.hookimpl
+def conda_environment_exporters():
+    yield plugins.types.CondaEnvironmentExporter(
+        name="environment-json",
+        aliases=("json",),
+        default_filenames=("environment.json",),
+        export=export_json,
+    )
+```
+
+---
+
+### CondaPackageExtractor
+
+Defines a custom package extractor.
+
+**Fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `str` | Yes | Extractor name |
+| `extensions` | `list[str]` | Yes | Supported file extensions (e.g., `[".conda", ".tar.bz2"]`) |
+| `extract` | `PackageExtract` | Yes | Extraction function |
+
+**Extract Signature:**
+
+```python
+def extract(source_path: PathType, destination_directory: PathType) -> None:
+    # Extract package contents
+    pass
+```
+
+**Example:**
+
+```python
+import tarfile
+from conda import plugins
+from conda.common.path import PathType
+
+
+def extract_tar_xz(source_path: PathType, destination_directory: PathType) -> None:
+    with tarfile.open(source_path, 'r:xz') as tar:
+        tar.extractall(destination_directory)
+
+
+@plugins.hookimpl
+def conda_package_extractors():
+    yield plugins.types.CondaPackageExtractor(
+        name="tar-xz",
+        extensions=[".tar.xz"],
+        extract=extract_tar_xz,
+    )
+```
+
+---
+
+## Abstract Base Classes
+
+### ReporterRendererBase
+
+Base class for custom reporter renderers.
+
+**Methods to Implement:**
+
+```python
+class MyRenderer(ReporterRendererBase):
+    def detail_view(self, data: dict[str, str | int | bool], **kwargs) -> str:
+        """Render tabular output."""
+        pass
+    
+    def envs_list(self, data: Iterable[str] | dict, **kwargs) -> str:
+        """Render environment list."""
+        pass
+    
+    def progress_bar(self, description: str, **kwargs) -> ProgressBarBase:
+        """Return progress bar instance."""
+        pass
+    
+    def spinner(self, message: str, failed_message: str) -> SpinnerBase:
+        """Return spinner instance."""
+        pass
+    
+    def prompt(self, message: str = "Proceed", choices=("yes", "no"), default: str = "yes") -> str:
+        """Prompt user for confirmation."""
+        pass
+```
+
+---
+
+### ProgressBarBase
+
+Base class for progress bar implementations.
+
+**Methods to Implement:**
+
+```python
+class MyProgressBar(ProgressBarBase):
+    def update_to(self, fraction: float) -> None:
+        """Update progress to fraction (0.0 to 1.0)."""
+        pass
+    
+    def refresh(self) -> None:
+        """Refresh the progress bar display."""
+        pass
+    
+    def close(self) -> None:
+        """Close and clean up the progress bar."""
+        pass
+```
+
+---
+
+### SpinnerBase
+
+Base class for spinner implementations.
+
+**Methods to Implement:**
+
+```python
+class MySpinner(SpinnerBase):
+    def __enter__(self):
+        """Start the spinner."""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Stop the spinner."""
+        pass
+```
+
+---
+
+### EnvironmentSpecBase
+
+<Warning>
+  **EXPERIMENTAL** - This API may change in future releases.
+</Warning>
+
+Base class for environment specification parsers.
+
+**Class Attributes:**
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `detection_supported` | `bool` | Whether auto-detection is enabled (default: `True`) |
+
+**Methods to Implement:**
+
+```python
+class MySpec(EnvironmentSpecBase):
+    detection_supported = True
+    
+    def can_handle(self) -> bool:
+        """Determine if this spec can handle the file."""
+        pass
+    
+    @property
+    def env(self) -> Environment:
+        """Parse and return the Environment object."""
+        pass
+```
+
+---
+
+## Type Aliases
+
+Useful type aliases defined in the types module:
+
+```python
+# Prefix data loader callable
+CondaPrefixDataLoaderCallable = Callable[
+    [PathType, dict[str, PrefixRecord]],
+    dict[str, PrefixRecord],
+]
+
+# Package extraction callable
+PackageExtract = Callable[
+    [PathType, PathType],  # (source_path, destination_directory)
+    None,
+]
+
+# Environment export callables
+SinglePlatformEnvironmentExport = Callable[[Environment], str]
+MultiPlatformEnvironmentExport = Callable[[Iterable[Environment]], str]
+
+# Confirm callback for health check fixers
+ConfirmCallback = Callable[[str], None]
+```
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Plugin Overview" icon="book" href="/api/plugins/overview">
+    Learn about the plugin system architecture
+  </Card>
+  
+  <Card title="Hook Specifications" icon="hook" href="/api/plugins/hookspecs">
+    Explore all available plugin hooks
+  </Card>
+</CardGroup>

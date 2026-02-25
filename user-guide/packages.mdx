@@ -1,0 +1,665 @@
+---
+title: Package Management
+description: Install, update, and manage packages in conda environments
+---
+
+## Overview
+
+Conda packages are compressed archives containing compiled software, libraries, and metadata. This guide covers how to install, update, and manage packages in your conda environments.
+
+<Info>
+Conda handles package dependencies automatically, ensuring all required packages are installed together.
+</Info>
+
+## Package Formats
+
+Conda supports two package formats:
+
+<CodeGroup>
+```python Package Extensions
+CONDA_PACKAGE_EXTENSION_V1 = ".tar.bz2"  # Legacy format
+CONDA_PACKAGE_EXTENSION_V2 = ".conda"    # Modern format (faster)
+```
+</CodeGroup>
+
+<Tip>
+The `.conda` format is significantly faster to extract and is preferred for new packages.
+</Tip>
+
+## Installing Packages
+
+### Basic Installation
+
+Use `conda install` to add packages to your environment:
+
+<CodeGroup>
+```bash Single Package
+# Install into active environment
+conda install numpy
+
+# Install specific version
+conda install numpy=1.24.3
+
+# Install with version constraint
+conda install "numpy>=1.24,<2.0"
+```
+
+```bash Multiple Packages
+# Install multiple packages
+conda install numpy pandas matplotlib
+
+# Install into specific environment
+conda install -n myenv scipy curl wheel
+
+# Install into environment at path
+conda install -p /path/to/myenv python=3.11
+```
+</CodeGroup>
+
+<Info>
+Conda installs the newest compatible versions of requested packages by default. Use version specifiers to control which version is installed.
+</Info>
+
+### Installation Options
+
+<Accordion title="Install from Specific Channel">
+  ```bash
+  # Install from conda-forge
+  conda install -c conda-forge package_name
+  
+  # Install from multiple channels
+  conda install -c conda-forge -c bioconda biopython
+  ```
+</Accordion>
+
+<Accordion title="Install from File">
+  ```bash
+  # Install from requirements file
+  conda install --file requirements.txt
+  
+  # Install from environment file
+  conda install --file environment.yml
+  ```
+</Accordion>
+
+<Accordion title="Install Without Dependencies">
+  ```bash
+  # Skip dependency checking (use with caution)
+  conda install --no-deps package_name
+  ```
+  
+  <Warning>
+  Using `--no-deps` may result in an environment with incompatible packages. Use this option only when you're certain dependencies are already satisfied.
+  </Warning>
+</Accordion>
+
+<Accordion title="Install Explicit Package Files">
+  ```bash
+  # Install from local file
+  conda install ./package-1.0.0-py311.tar.bz2
+  
+  # Install from URL
+  conda install https://example.com/package-1.0.0-py311.conda
+  ```
+  
+  <Note>
+  Installing explicit filenames implies `--no-deps` and cannot be mixed with package specifications.
+  </Note>
+</Accordion>
+
+### Advanced Installation Options
+
+<CodeGroup>
+```bash Freeze Installed Packages
+# Prevent updates to existing packages
+conda install --freeze-installed new_package
+```
+
+```bash Force Reinstall
+# Reinstall even if already present
+conda install --force-reinstall numpy
+```
+
+```bash Dry Run
+# Preview changes without installing
+conda install --dry-run numpy pandas
+```
+
+```bash Download Only
+# Download packages without installing
+conda install --download-only scipy
+```
+</CodeGroup>
+
+## Package Specifications
+
+### MatchSpec Syntax
+
+Package specifications in conda use the MatchSpec format:
+
+<CodeGroup>
+```bash Version Constraints
+# Exact version
+numpy==1.24.3
+
+# Greater than or equal
+numpy>=1.24
+
+# Range
+"numpy>=1.24,<2.0"
+
+# Compatible release
+numpy~=1.24.0  # equivalent to >=1.24.0,<1.25.0
+```
+
+```bash Channel Specifications
+# From specific channel
+conda-forge::numpy
+
+# With version from channel
+conda-forge::numpy=1.24
+
+# Multiple constraints
+"conda-forge::numpy>=1.24,<2.0"
+```
+
+```bash Build Specifications
+# Specific build
+numpy=1.24.3=py311h1234567_0
+
+# Build string pattern
+numpy=1.24.3=py311*
+```
+</CodeGroup>
+
+## Updating Packages
+
+### Update Individual Packages
+
+<CodeGroup>
+```bash Update Single Package
+# Update to latest version
+conda update numpy
+
+# Update in specific environment
+conda update -n myenv numpy
+
+# Update to specific version
+conda install numpy=1.25.0
+```
+
+```bash Update Multiple Packages
+# Update several packages
+conda update numpy pandas matplotlib
+```
+</CodeGroup>
+
+### Update All Packages
+
+```bash
+# Update all packages in active environment
+conda update --all
+
+# Update all in specific environment
+conda update -n myenv --all
+```
+
+<Warning>
+Updating all packages may change many package versions. Consider using `--dry-run` first to preview changes.
+</Warning>
+
+### Aggressive Update Packages
+
+Certain packages are updated aggressively for security:
+
+<CodeGroup>
+```python Always Updated Packages
+DEFAULT_AGGRESSIVE_UPDATE_PACKAGES = (
+    "ca-certificates",
+    "certifi",
+    "openssl",
+)
+```
+</CodeGroup>
+
+<Info>
+These security-related packages are prioritized for updates to ensure your environment stays secure.
+</Info>
+
+### Update Modifiers
+
+Control how dependencies are updated:
+
+<CodeGroup>
+```bash Update Strategies
+# Update only specified packages (default)
+conda install --update-specs numpy
+
+# Update dependencies of specified packages
+conda install --update-deps numpy
+
+# Update all packages possible
+conda install --update-all numpy
+
+# Freeze installed packages (don't update deps)
+conda install --freeze-installed numpy
+```
+</CodeGroup>
+
+## Removing Packages
+
+### Remove Individual Packages
+
+<CodeGroup>
+```bash Remove Single Package
+# Remove from active environment
+conda remove numpy
+
+# Remove from specific environment
+conda remove -n myenv numpy
+
+# Remove from path
+conda remove -p /path/to/myenv numpy
+```
+
+```bash Remove Multiple Packages
+# Remove several packages
+conda remove numpy pandas matplotlib
+```
+</CodeGroup>
+
+### Remove with Options
+
+<Accordion title="Remove Without Dependencies">
+  ```bash
+  # Remove package but keep dependencies
+  conda remove --no-deps numpy
+  ```
+</Accordion>
+
+<Accordion title="Prune Unused Dependencies">
+  ```bash
+  # Remove packages that are no longer required
+  conda install --prune
+  ```
+  
+  <Tip>
+  Use `--prune` after removing packages to clean up orphaned dependencies.
+  </Tip>
+</Accordion>
+
+<Accordion title="Remove All Packages (Delete Environment)">
+  ```bash
+  # Remove all packages from environment
+  conda remove -n myenv --all
+  ```
+  
+  <Warning>
+  This deletes the entire environment. Use `conda env remove` instead for clarity.
+  </Warning>
+</Accordion>
+
+### Protected Packages
+
+Some packages in the base environment cannot be removed:
+
+<CodeGroup>
+```python Protected in Base Environment
+ROOT_NO_RM = (
+    "python",
+    "pycosat",
+    "ruamel.yaml",
+    "conda",
+    "openssl",
+    "requests",
+)
+```
+</CodeGroup>
+
+<Info>
+These packages are essential for conda's operation and are protected from removal in the base environment.
+</Info>
+
+## Listing Packages
+
+### Basic Listing
+
+<CodeGroup>
+```bash List All Packages
+# List packages in active environment
+conda list
+
+# List in specific environment
+conda list -n myenv
+
+# List in reverse order
+conda list --reverse
+```
+
+```bash Search and Filter
+# List packages matching pattern (regex)
+conda list ^py
+
+# List specific package
+conda list numpy
+```
+</CodeGroup>
+
+### Custom Output Formats
+
+<Accordion title="Export Format">
+  ```bash
+  # Export package list for reinstallation
+  conda list --export > package-list.txt
+  
+  # Reinstall from export
+  conda create -n newenv --file package-list.txt
+  ```
+</Accordion>
+
+<Accordion title="Explicit Format">
+  ```bash
+  # Export with full URLs
+  conda list --explicit > explicit-spec.txt
+  
+  # Create exact replica
+  conda create -n replica --file explicit-spec.txt
+  ```
+</Accordion>
+
+<Accordion title="Custom Fields">
+  ```bash
+  # Show only name and version
+  conda list --fields name,version
+  
+  # Show with channel information
+  conda list --fields name,version,channel
+  ```
+  
+  Available fields:
+  <CodeGroup>
+  ```python List Fields
+  DEFAULT_CONDA_LIST_FIELDS = (
+      "name",
+      "version",
+      "build",
+      "channel_name",
+  )
+  
+  # Other available fields:
+  # arch, build_number, channel, constrains, depends,
+  # dist_str, features, fn, license, license_family,
+  # md5, noarch, package_type, requested_spec, sha256,
+  # size, subdir, timestamp, track_features, url
+  ```
+  </CodeGroup>
+</Accordion>
+
+<Accordion title="Canonical Names">
+  ```bash
+  # Output canonical package names only
+  conda list --canonical
+  ```
+</Accordion>
+
+### JSON Output
+
+```bash
+# Output as JSON for scripting
+conda list --json
+
+# Specific package in JSON
+conda list numpy --json
+```
+
+## Package Dependencies
+
+### Understanding Dependencies
+
+Every package declares its dependencies in metadata. Conda automatically resolves and installs these dependencies.
+
+<CodeGroup>
+```python Dependency Modifiers
+class DepsModifier(Enum):
+    NOT_SET = "not_set"      # Default: handle normally
+    NO_DEPS = "no_deps"      # Skip dependencies
+    ONLY_DEPS = "only_deps"  # Install only dependencies
+```
+</CodeGroup>
+
+### Install Only Dependencies
+
+```bash
+# Install dependencies but not the package itself
+conda install --only-deps numpy
+```
+
+<Tip>
+Useful when you're building the main package from source but need its dependencies.
+</Tip>
+
+## Package Revisions
+
+### View Revision History
+
+Conda tracks all changes to your environment:
+
+```bash
+# List all revisions
+conda list --revisions
+
+# Show specific revision
+conda list --revision 5
+```
+
+### Revert to Previous Revision
+
+```bash
+# Revert to specific revision number
+conda install --revision 5
+
+# View revision before reverting
+conda install --revision 5 --dry-run
+```
+
+<Warning>
+Reverting to a previous revision may downgrade packages or remove packages that were installed later.
+</Warning>
+
+## Package Conflicts and Resolution
+
+### Path Conflicts
+
+When packages try to install files to the same location:
+
+<CodeGroup>
+```python Path Conflict Options
+class PathConflict(Enum):
+    clobber = "clobber"    # Overwrite files
+    warn = "warn"          # Warn but continue
+    prevent = "prevent"    # Stop installation
+```
+</CodeGroup>
+
+```bash
+# Allow overwriting files
+conda install --clobber package_name
+```
+
+### Safety Checks
+
+<CodeGroup>
+```python Safety Check Levels
+class SafetyChecks(Enum):
+    disabled = "disabled"  # No safety checks
+    warn = "warn"          # Warn about issues
+    enabled = "enabled"    # Enforce safety
+```
+</CodeGroup>
+
+## Solver Selection
+
+Conda can use different solvers for dependency resolution:
+
+<CodeGroup>
+```python Available Solvers
+DEFAULT_SOLVER = "libmamba"  # Modern, fast solver
+CLASSIC_SOLVER = "classic"   # Legacy solver
+```
+</CodeGroup>
+
+```bash
+# Use specific solver
+conda install --solver=classic numpy
+
+# Use default (libmamba)
+conda install numpy
+```
+
+<Info>
+The libmamba solver is significantly faster than the classic solver and is now the default.
+</Info>
+
+## Package Cache Management
+
+### View Cache
+
+```bash
+# Show cache information
+conda info
+
+# List cached packages
+conda clean --dry-run --packages
+```
+
+### Clean Cache
+
+```bash
+# Remove unused cached packages
+conda clean --packages
+
+# Remove all cached data
+conda clean --all
+
+# Preview what would be removed
+conda clean --all --dry-run
+```
+
+<Tip>
+Regularly cleaning the package cache can free up significant disk space.
+</Tip>
+
+## Partial Downloads
+
+During downloads, partial files are marked:
+
+<CodeGroup>
+```python Partial File Extension
+PARTIAL_EXTENSION = ".partial"
+```
+</CodeGroup>
+
+If a download is interrupted, the `.partial` file remains and the download can be resumed.
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Pin Important Packages">
+    Prevent critical packages from being updated:
+    ```bash
+    echo "python 3.11.*" >> $CONDA_PREFIX/conda-meta/pinned
+    echo "numpy 1.24.*" >> $CONDA_PREFIX/conda-meta/pinned
+    ```
+  </Accordion>
+  
+  <Accordion title="Use Dry Run Before Major Changes">
+    Preview changes before committing:
+    ```bash
+    conda update --all --dry-run
+    conda remove large_package --dry-run
+    ```
+  </Accordion>
+  
+  <Accordion title="Prefer Conda Packages Over Pip">
+    When available, use conda packages instead of pip:
+    ```bash
+    # Preferred
+    conda install numpy
+    
+    # Fallback
+    pip install numpy
+    ```
+    
+    Conda packages include compiled dependencies and are better integrated.
+  </Accordion>
+  
+  <Accordion title="Keep Base Environment Minimal">
+    Install project-specific packages in separate environments:
+    ```bash
+    # In base: only conda and essential tools
+    conda activate base
+    conda install conda-build
+    
+    # Project packages in separate env
+    conda create -n project1 numpy pandas
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Solving Environment Takes Forever">
+    Try using the libmamba solver:
+    ```bash
+    conda install --solver=libmamba package_name
+    ```
+    
+    Or reduce the search space:
+    ```bash
+    conda install --freeze-installed package_name
+    ```
+  </Accordion>
+  
+  <Accordion title="Package Not Found">
+    Check which channels are being searched:
+    ```bash
+    conda config --show channels
+    ```
+    
+    Try a different channel:
+    ```bash
+    conda install -c conda-forge package_name
+    ```
+  </Accordion>
+  
+  <Accordion title="Conflicts Between Packages">
+    Create a new environment for conflicting requirements:
+    ```bash
+    conda create -n separate_env package_with_conflict
+    ```
+    
+    Or use a constraints file to guide the solver.
+  </Accordion>
+  
+  <Accordion title="Package Version Not Available">
+    Search for available versions:
+    ```bash
+    conda search package_name
+    
+    # Search in specific channel
+    conda search -c conda-forge package_name
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Channel Management" icon="network-wired" href="/user-guide/channels">
+    Learn how to configure and prioritize package channels
+  </Card>
+  <Card title="Environment Management" icon="layer-group" href="/user-guide/environments">
+    Manage environments for your packages
+  </Card>
+</CardGroup>
